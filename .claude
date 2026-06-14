@@ -1,0 +1,649 @@
+# CLAUDE — Projeto Celestia
+
+## 1. Objetivo
+
+Construir um MVP web para auxiliar mestres e jogadores do RPG Celestia no gerenciamento de campanhas e fichas de personagens.
+
+O produto não é uma mesa virtual. Ele não deve substituir ferramentas externas de mapa, chat, voz, vídeo, rolagem de dados, combate, turnos ou tokens.
+
+Pergunta obrigatória antes de criar qualquer funcionalidade:
+
+> Isso ajuda diretamente o mestre ou o jogador a gerenciar a campanha ou o personagem?
+
+Se a resposta for negativa, a funcionalidade fica fora do MVP.
+
+---
+
+## 2. Prioridade atual
+
+A prioridade é validar a arquitetura e o fluxo principal, não implementar todo o ruleset do Celestia.
+
+Fluxo que o MVP precisa provar:
+
+1. Usuário cria conta;
+2. Usuário cria uma campanha;
+3. Mestre convida outro usuário;
+4. Jogador aceita ou recusa o convite;
+5. Jogador cria um personagem;
+6. Jogador consulta e edita sua ficha permitida;
+7. Mestre consulta e administra todas as fichas da campanha;
+8. Permissões são aplicadas na interface e no banco.
+
+Os quatro núcleos do MVP são:
+
+- Campanha;
+- Participante;
+- Personagem;
+- Permissão.
+
+---
+
+## 3. Stack obrigatória
+
+- Next.js com App Router;
+- TypeScript em modo estrito;
+- Supabase Auth;
+- PostgreSQL via Supabase;
+- Row Level Security para autorização;
+- Validação de entrada no servidor;
+- Testes para regras de negócio e permissões críticas.
+
+Não adicionar dependências sem necessidade clara.
+
+### 3.1 Ambiente de desenvolvimento local
+
+- Banco de dados local em **PostgreSQL via Docker**, orquestrado por `docker-compose.yaml` na raiz do projeto;
+- O `docker-compose.yaml` deve subir ao menos o serviço `postgres` (porta padrão 5432) com volume nomeado para persistência;
+- Variáveis sensíveis (senha do Postgres, URL de conexão, chaves do Supabase) ficam em `.env.local`, nunca commitadas;
+- Fornecer um `.env.example` versionado, sem valores reais;
+- As migrações rodam contra o banco local antes de qualquer push;
+- Em produção, o Postgres é o do Supabase. A camada de aplicação é a mesma; só a string de conexão muda.
+
+---
+
+## 4. Arquitetura
+
+Usar arquitetura inspirada em MVC, adaptada ao Next.js e organizada por responsabilidade.
+
+Estrutura recomendada:
+
+```text
+src/
+├── app/
+│   ├── auth/
+│   ├── campaigns/
+│   ├── invitations/
+│   ├── characters/
+│   └── api/
+│
+├── features/
+│   ├── campaigns/
+│   │   ├── actions/
+│   │   ├── services/
+│   │   ├── repositories/
+│   │   ├── schemas/
+│   │   └── components/
+│   ├── invitations/
+│   ├── characters/
+│   └── members/
+│
+├── domain/
+│   ├── campaign/
+│   ├── character/
+│   ├── invitation/
+│   ├── membership/
+│   └── ruleset/
+│
+├── infrastructure/
+│   ├── database/
+│   ├── supabase/
+│   └── repositories/
+│
+└── shared/
+    ├── auth/
+    ├── errors/
+    ├── permissions/
+    ├── validation/
+    └── types/
+```
+
+Responsabilidades:
+
+- `app`: rotas, páginas, layouts e adaptação de requisições;
+- `features`: casos de uso e coordenação das ações;
+- `domain`: entidades e regras de negócio independentes de framework;
+- `infrastructure`: Supabase, banco e implementações de repositórios;
+- `shared`: utilitários realmente compartilhados.
+
+Regras:
+
+- Componentes de interface não acessam o banco diretamente;
+- Regras de negócio não ficam em componentes React;
+- Repositórios não contêm regras de apresentação;
+- Casos de uso não dependem de detalhes visuais;
+- Domínio não importa módulos de Next.js ou Supabase;
+- Não criar abstrações genéricas antes de existir necessidade real.
+
+---
+
+## 5. Escopo obrigatório do MVP
+
+### 5.1 Autenticação
+
+- Cadastro;
+- Login;
+- Logout;
+- Perfil básico com nome de exibição e avatar opcional.
+
+### 5.2 Campanhas
+
+- Criar campanha;
+- Listar campanhas do usuário;
+- Visualizar campanha;
+- Editar nome e descrição;
+- Alterar estado;
+- Arquivar campanha;
+- Reabrir campanha encerrada.
+
+Estados:
+
+- Em preparação;
+- Em andamento;
+- Pausada;
+- Encerrada;
+- Arquivada.
+
+Arquivamento não exclui dados definitivamente.
+
+### 5.3 Convites
+
+- Convites apenas entre usuários cadastrados;
+- Convite enviado dentro do sistema;
+- Um convite por usuário e campanha;
+- Convite sem prazo de validade;
+- Mestre pode cancelar convite pendente;
+- Jogador pode aceitar ou recusar;
+- Convite aceito não pode ser reutilizado.
+
+### 5.4 Participantes
+
+- Um usuário pode participar de várias campanhas;
+- O criador da campanha é o mestre;
+- Não haverá múltiplos mestres no MVP;
+- Jogador não sai voluntariamente;
+- Mestre pode remover jogador;
+- Jogador removido perde acesso à campanha;
+- O personagem do jogador removido recebe estado `Morto`;
+- O personagem permanece no histórico da campanha.
+
+### 5.5 Personagens
+
+- Um personagem por jogador por campanha;
+- Personagem pertence somente à campanha em que foi criado;
+- Personagem não pode ser transferido entre campanhas;
+- Mestre pode visualizar e editar todas as fichas da campanha;
+- Jogador pode visualizar e editar apenas sua ficha, conforme permissões;
+- Mestre pode bloquear ou desbloquear a ficha inteira;
+- Mestre pode marcar personagem como `Ativo` ou `Morto`.
+
+Informações básicas iniciais:
+
+- Nome;
+- Imagem;
+- Sexo;
+- Idade;
+- Raça;
+- Classes e especializações (multiclasse no nível 1, ver 5.5.1);
+- Descrição visual;
+- Background;
+- Estado;
+- Ficha bloqueada.
+
+Classe, especialização e raça aparecem como **campos de referência sem efeito mecânico** no MVP estrutural. O sistema apenas registra o que o jogador escolheu; o mestre interpreta os efeitos.
+
+#### 5.5.1 Multiclasse no nível 1
+
+No nível 1, o personagem escolhe **duas categorias de classe**, cada uma com sua **especialização**.
+
+- O sistema deve permitir registrar duas combinações (classe + especialização) por personagem;
+- Modelar como relação separada (`character_classes` com `slot` 1 e 2), não como duas colunas fixas em `characters`;
+- Cada especialização deve pertencer à classe escolhida no mesmo slot;
+- As duas combinações são tratadas com peso igual neste MVP (sem classe primária/secundária);
+- A regra de evolução por classe está fora do MVP estrutural.
+
+#### 5.5.2 Restrição de classe: Bruxa
+
+A classe Bruxa só pode ser selecionada por personagens do sexo feminino **e** da raça Bruxa. A validação deve existir no servidor.
+
+### 5.6 Visibilidade
+
+Informações públicas para participantes da campanha:
+
+- Nome;
+- Imagem;
+- Raça;
+- Classe;
+- Nível, quando existir;
+- Descrição visual.
+
+Informações privadas:
+
+- Atributos;
+- Background completo;
+- Perícias;
+- Habilidades;
+- Inventário;
+- Histórico;
+- Anotações;
+- Recursos internos do personagem.
+
+Apenas o dono e o mestre acessam informações privadas.
+
+### 5.7 Histórico mínimo
+
+Registrar inicialmente:
+
+- Campanha criada;
+- Convite enviado, aceito, recusado ou cancelado;
+- Jogador removido;
+- Personagem criado;
+- Personagem editado;
+- Ficha bloqueada ou desbloqueada;
+- Estado do personagem alterado;
+- Campanha arquivada ou reaberta.
+
+Usar metadados estruturados para detalhes sem criar dezenas de colunas prematuramente.
+
+---
+
+## 6. Ruleset Celestia no MVP
+
+O ruleset deve existir como camada separada da plataforma.
+
+### 6.1 Atributos
+
+Existem seis atributos:
+
+- Força;
+- Destreza;
+- Constituição;
+- Inteligência;
+- Mente;
+- Carisma.
+
+Os seis atributos devem aparecer na ficha, no formulário de criação, no schema do banco (`character_attributes`) e nos tipos compartilhados. No MVP estrutural eles são apenas registrados manualmente, sem fórmulas, pool de pontos ou aplicação automática de bônus.
+
+### 6.2 Catálogos
+
+Raças, classes e especializações começam como dados de referência simples.
+
+Campos mínimos:
+
+```text
+id
+name
+description
+active
+```
+
+No MVP estrutural, não implementar automaticamente:
+
+- Bônus raciais;
+- Penalidades raciais;
+- Passivas;
+- Restrições complexas (exceção: a restrição da classe Bruxa, ver 5.5.2);
+- Fórmulas de atributos;
+- Requisitos de classe;
+- Requisitos de perícia;
+- Habilidades por nível;
+- Efeitos automáticos.
+
+Seeds podem conter nomes e descrições para permitir o fluxo de criação. Bônus, passivas e atributos primários ficam como texto descritivo no campo `description` por enquanto, sem colunas dedicadas até a fase 4.
+
+### 6.3 Classes previstas
+
+- Guerreiro;
+- Paladino;
+- Arqueiro;
+- Ladino;
+- Mago;
+- Feiticeiro;
+- Clérigo;
+- Druida;
+- Atirador;
+- Bruxa;
+- Lutador;
+- Bardo.
+
+Especializações devem ser registros vinculados à classe, não enums rígidos no código.
+
+### 6.4 Raças e Anumanos
+
+Raças e Anumanos devem ser dados de referência.
+
+Os Anumanos atuais são:
+
+- Diffo;
+- Feral;
+- Gwyrá;
+- Kãngues.
+
+Passivas e bônus podem ser armazenados como texto descritivo no início, sem automação.
+
+---
+
+## 7. Variáveis e configurações futuras
+
+Não espalhar números fixos pelo código.
+
+Preparar uma configuração central para valores futuros, por exemplo:
+
+```text
+attribute_points_default
+health_base
+health_per_constitution
+inventory_slots
+base_carry_weight
+skill_limit_by_race
+max_attribute_creation
+max_attribute_evolution
+level_progression
+```
+
+`skill_limit_by_race` é um mapa por raça (ex: humano permite mais perícias na criação). Não codar exceção por raça com `if`.
+
+`level_progression` guarda a tabela de XP por nível e os ganhos de cada nível (pontos de atributo, perícias, habilidades de classe, atributo direto, marcadores narrativos, novos slots de equipamento). Estrutura por dados, nunca por código.
+
+Essas configurações podem começar ausentes, nulas ou com valores provisórios.
+
+Não implementar um editor de configurações no MVP.
+
+---
+
+## 8. Fora do MVP atual
+
+Não implementar agora:
+
+- Fórmula automática de vida;
+- Curva de XP;
+- Nível automático;
+- Evolução com aprovação;
+- Requisitos automáticos de perícias;
+- Passivas raciais automáticas;
+- Inventário com slots e peso;
+- Equipamentos;
+- Consumíveis;
+- Dinheiro;
+- Relíquias;
+- NPCs;
+- Histórico detalhado por campo;
+- Editor de classes, raças ou perícias;
+- Motor de regras;
+- Motor de efeitos;
+- Sistema genérico de modificadores;
+- Múltiplos mestres;
+- Transferência de personagens;
+- Notificações externas;
+- Aplicativo mobile nativo.
+
+Esses itens devem ser planejados como extensões, não misturados à fundação.
+
+---
+
+## 9. Fora do escopo permanente
+
+Nunca transformar o sistema em mesa virtual.
+
+Não implementar:
+
+- Mapas;
+- Chat;
+- Voz ou vídeo;
+- Rolagem de dados;
+- Tokens;
+- Turnos;
+- Combate automatizado;
+- Ataques automáticos;
+- Dano ou cura automáticos;
+- Condições automáticas;
+- Interpretação automática de passivas;
+- Execução automática de efeitos de perícias;
+- Música ou ambientação.
+
+O sistema registra informações. O mestre interpreta e conduz a partida.
+
+---
+
+## 10. Modelo de dados inicial
+
+Entidades mínimas:
+
+```text
+profiles
+campaigns
+campaign_members
+invites
+characters
+character_classes
+character_attributes
+races
+classes
+specializations
+history_log
+```
+
+### Estrutura essencial
+
+- `characters` não guarda `class_id` nem `specialization_id` diretamente: as combinações ficam em `character_classes`;
+- `character_classes` tem `character_id`, `class_id`, `specialization_id` e `slot` (1 ou 2);
+- `character_attributes` tem uma coluna por atributo: `força`, `destreza`, `constituição`, `inteligência`, `mente`, `carisma`. Os seis são inteiros que aceitam negativos no MVP estrutural (sem regra de piso ou teto ainda);
+- `specializations` pertence a uma classe via `class_id`.
+
+### Restrições importantes
+
+- `campaigns.owner_id` identifica o mestre;
+- `campaign_members` deve impedir duplicidade de usuário na mesma campanha;
+- `invites` deve impedir dois convites pendentes para o mesmo usuário e campanha;
+- `characters` deve impedir mais de um personagem do mesmo dono na mesma campanha;
+- `character_classes` deve impedir duplicidade do mesmo slot por personagem (1 e 2 únicos);
+- `character_classes.specialization_id` deve pertencer à classe do mesmo slot;
+- exclusão física deve ser evitada nas entidades principais;
+- usar estados e timestamps de arquivamento quando necessário.
+
+---
+
+## 11. Segurança e RLS
+
+Toda permissão deve ser protegida no banco.
+
+Políticas mínimas:
+
+- Usuário acessa somente campanhas das quais participa;
+- Mestre administra somente campanhas que criou;
+- Jogador acessa somente seu personagem completo;
+- Jogador acessa apenas dados públicos de outros personagens da campanha;
+- Mestre acessa todos os personagens da própria campanha;
+- Convites só são visíveis para mestre da campanha e usuário convidado;
+- Histórico privado segue as mesmas permissões do personagem;
+- Ficha bloqueada impede edição pelo jogador também no servidor.
+
+Nunca usar apenas ocultação de botões como autorização.
+
+Não utilizar chave de serviço do Supabase no cliente.
+
+---
+
+## 12. Convenções de implementação
+
+- TypeScript estrito, sem `any` sem justificativa;
+- Nomes de código em inglês;
+- Textos da interface em português;
+- Funções pequenas e com responsabilidade única;
+- Evitar arquivos genéricos como `utils.ts` quando houver domínio claro;
+- Validação com schemas reutilizáveis;
+- Erros de domínio explícitos;
+- Datas armazenadas em UTC;
+- IDs gerados pelo banco;
+- Migrações versionadas;
+- Seeds idempotentes;
+- Nenhuma regra crítica somente no cliente;
+- Não duplicar regra entre página, action e banco sem uma fonte clara;
+- Preferir composição a herança;
+- Preferir casos de uso explícitos a funções genéricas de CRUD.
+
+Exemplos de casos de uso:
+
+```text
+CreateCampaign
+ArchiveCampaign
+SendCampaignInvite
+AcceptCampaignInvite
+RemoveCampaignMember
+CreateCharacter
+UpdateCharacterNarrative
+LockCharacterSheet
+ChangeCharacterStatus
+```
+
+---
+
+## 13. Testes obrigatórios
+
+Priorizar testes de:
+
+- Permissões de mestre e jogador;
+- RLS;
+- Aceitação e cancelamento de convites;
+- Duplicidade de participantes;
+- Um personagem por usuário por campanha;
+- Bloqueio de ficha;
+- Remoção de jogador;
+- Arquivamento sem perda de dados;
+- Visibilidade pública e privada;
+- Multiclasse: exatamente duas combinações por personagem, slots únicos e especialização pertencendo à classe do slot;
+- Restrição da classe Bruxa (mulher e raça Bruxa).
+
+Não priorizar testes visuais complexos antes das regras de acesso.
+
+---
+
+## 14. Ordem de implementação
+
+### Fase 1 — Fundação
+
+- Configuração do projeto;
+- Supabase Auth;
+- Perfis;
+- Migrações;
+- Campanhas;
+- Participantes;
+- Convites;
+- RLS base.
+
+### Fase 2 — Personagem
+
+- Seeds mínimos de raça, classe e especialização;
+- Criação de personagem;
+- Seis atributos armazenados manualmente (Força, Destreza, Constituição, Inteligência, Mente, Carisma);
+- Multiclasse no nível 1 (duas combinações classe + especialização);
+- Restrição da classe Bruxa;
+- Visualização pública e privada;
+- Edição narrativa;
+- Bloqueio da ficha.
+
+### Fase 3 — Administração
+
+- Remover jogador;
+- Marcar personagem como morto;
+- Arquivar campanha;
+- Histórico mínimo;
+- Revisão das políticas de segurança.
+
+### Fase 4 — Expansões do ruleset
+
+Somente depois de validar as fases anteriores:
+
+- Bônus raciais (incluindo bônus em Mente);
+- Vida (fórmula `100 + Constituição × 10`, vida atual manual do mestre, exibição em % para o dono);
+- Perícias (modelo de requisito; 2 por padrão, 3 para Humano);
+- Inventário (16 slots, peso `10 + Força`);
+- XP e níveis (ver 14.1);
+- Evolução com aprovação;
+- Passivas raciais (incluindo restrição da raça Bruxa e injeção de perícia racial como Brutamontes em Ogros);
+- Capacidade de carga.
+
+#### 14.1 Curva de XP e ganhos por nível
+
+XP é concedido apenas pelo mestre. O nível é **calculado automaticamente** a partir do XP acumulado.
+
+| Nível | XP necessário (acumulado) | Ganhos ao atingir o nível |
+|---:|---:|---|
+| 1 | 0 | inicial (criação) |
+| 2 | 100 | +3 pontos de atributo; +2 habilidades de classe; libera slot de anéis e colares nos equipáveis |
+| 3 | 200 | +1 perícia; +4 em Mente; reconhecimento no mundo (mais influência e confiança) |
+| 4 | 500 | +3 pontos de atributo; +2 habilidades de classe |
+| 5 | 1200 | +1 habilidade especial de classe |
+| 6 | 3000 | +1 perícia; +4 em Mente; reconhecimento no mundo (mais influência e confiança) |
+
+Notas de modelagem:
+
+- A tabela vive em configuração ou tabela de seed (`level_progression`), nunca espalhada por `if/else` no código;
+- "+X em Mente" é ganho de atributo pela trilha de evolução. Cai sob `valor_final = distribuição + bônus_racial + evolução`, registrado no slot de evolução em Mente;
+- "+N pontos de atributo" entram no pool do jogador para distribuição livre, sujeitos à aprovação do mestre conforme as regras de evolução;
+- "+1 perícia" e "+N habilidades de classe" abrem escolhas de evolução: cada uma cumpre seu próprio requisito (perícia precisa do atributo mínimo; habilidade de classe vem do catálogo da classe correspondente, e em multiclasse o jogador escolhe de qual das duas classes recebe a habilidade naquele nível);
+- "Reconhecimento no mundo" é narrativo: registra um marcador no histórico para o mestre interpretar, sem efeito mecânico automático;
+- O slot de anéis e colares libera novas posições em `inventory` (equipáveis), não consumindo os 16 slots da mochila;
+- Níveis acima de 6 e a continuação da curva ficam como questão em aberto até o mestre definir.
+
+As regras detalhadas dessas expansões estão no documento de MVP completo (`mvp-celestia.md`) e no Compêndio Celestia. O `.claude` mantém apenas o MVP estrutural; o ruleset completo entra por fase.
+
+---
+
+## 15. Processo de trabalho do agente
+
+Antes de implementar uma alteração relevante:
+
+1. Ler este arquivo;
+2. Identificar o caso de uso afetado;
+3. Confirmar se está dentro do MVP atual;
+4. Listar arquivos e camadas que serão alterados;
+5. Verificar impacto em RLS e permissões;
+6. Implementar a menor solução completa;
+7. Adicionar ou atualizar testes;
+8. Executar validações de tipo, lint e testes;
+9. Registrar decisões arquiteturais importantes.
+
+Ao encontrar uma ambiguidade de balanceamento:
+
+- Não inventar regra;
+- Não bloquear a arquitetura;
+- Criar configuração, comentário de decisão ou questão em aberto;
+- Manter o comportamento manual quando possível.
+
+Ao encontrar uma funcionalidade fora do MVP:
+
+- Não implementar silenciosamente;
+- Registrar como extensão futura;
+- Manter a fundação preparada apenas quando isso não aumentar a complexidade atual.
+
+---
+
+## 16. Critério de conclusão do MVP estrutural
+
+O MVP estrutural está concluído quando:
+
+- Um usuário consegue criar conta e campanha;
+- O mestre consegue convidar um usuário cadastrado;
+- O jogador consegue aceitar o convite;
+- O jogador consegue criar um personagem básico com os seis atributos e duas combinações de classe e especialização;
+- A restrição da classe Bruxa funciona no servidor;
+- O mestre consegue visualizar e administrar a ficha;
+- O jogador consegue visualizar apenas o que possui permissão;
+- Outro jogador vê somente dados públicos;
+- O mestre consegue bloquear a ficha e remover o jogador;
+- A remoção marca o personagem como morto;
+- A campanha pode ser encerrada, reaberta e arquivada;
+- As políticas de RLS impedem acessos indevidos;
+- Os fluxos principais possuem testes.
+
+Não considerar o MVP incompleto por ausência de balanceamento, vida automática, inventário, XP ou evolução.
