@@ -2,27 +2,26 @@
 
 import { redirect } from 'next/navigation';
 import { createClient } from '@/infrastructure/supabase/server';
-import type { ActionResult } from '@/shared/types/action-result';
 
-export async function loginAction(formData: FormData): Promise<ActionResult> {
+export async function loginAction(formData: FormData): Promise<void> {
   const supabase = await createClient();
   const email = String(formData.get('email'));
   const password = String(formData.get('password'));
 
   const { error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) return { success: false, error: 'E-mail ou senha inválidos' };
+  if (error) redirect(`/auth/login?error=${encodeURIComponent('E-mail ou senha inválidos')}`);
 
   redirect('/campaigns');
 }
 
-export async function registerAction(formData: FormData): Promise<ActionResult> {
+export async function registerAction(formData: FormData): Promise<void> {
   const supabase = await createClient();
   const email = String(formData.get('email'));
   const password = String(formData.get('password'));
   const displayName = String(formData.get('displayName')).trim();
 
   if (!displayName || displayName.length < 2) {
-    return { success: false, error: 'Nome de exibição deve ter ao menos 2 caracteres' };
+    redirect(`/auth/register?error=${encodeURIComponent('Nome de exibição deve ter ao menos 2 caracteres')}`);
   }
 
   const { error } = await supabase.auth.signUp({
@@ -31,7 +30,7 @@ export async function registerAction(formData: FormData): Promise<ActionResult> 
     options: { data: { display_name: displayName } },
   });
 
-  if (error) return { success: false, error: error.message };
+  if (error) redirect(`/auth/register?error=${encodeURIComponent(error.message)}`);
 
   redirect('/auth/login?registered=true');
 }
