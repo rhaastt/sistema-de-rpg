@@ -46,6 +46,7 @@ export interface Database {
           display_name?: string;
           avatar_url?: string | null;
         };
+        Relationships: [];
       };
       campaigns: {
         Row: {
@@ -53,6 +54,7 @@ export interface Database {
           owner_id: string;
           name: string;
           description: string | null;
+          image_url: string | null;
           status: CampaignStatus;
           archived_at: string | null;
           created_at: string;
@@ -63,14 +65,17 @@ export interface Database {
           owner_id: string;
           name: string;
           description?: string | null;
+          image_url?: string | null;
           status?: CampaignStatus;
         };
         Update: {
           name?: string;
           description?: string | null;
+          image_url?: string | null;
           status?: CampaignStatus;
           archived_at?: string | null;
         };
+        Relationships: [];
       };
       campaign_members: {
         Row: {
@@ -90,6 +95,7 @@ export interface Database {
         Update: {
           removed_at?: string | null;
         };
+        Relationships: [];
       };
       invites: {
         Row: {
@@ -111,6 +117,7 @@ export interface Database {
         Update: {
           status?: InviteStatus;
         };
+        Relationships: [];
       };
       characters: {
         Row: {
@@ -154,6 +161,7 @@ export interface Database {
           status?: CharacterStatus;
           sheet_locked?: boolean;
         };
+        Relationships: [];
       };
       character_classes: {
         Row: {
@@ -174,6 +182,7 @@ export interface Database {
           class_id?: string;
           specialization_id?: string;
         };
+        Relationships: [];
       };
       character_attributes: {
         Row: {
@@ -204,6 +213,7 @@ export interface Database {
           mind?: number;
           charisma?: number;
         };
+        Relationships: [];
       };
       races: {
         Row: {
@@ -215,6 +225,7 @@ export interface Database {
         };
         Insert: { name: string; description?: string | null; active?: boolean };
         Update: { name?: string; description?: string | null; active?: boolean };
+        Relationships: [];
       };
       classes: {
         Row: {
@@ -226,6 +237,7 @@ export interface Database {
         };
         Insert: { name: string; description?: string | null; active?: boolean };
         Update: { name?: string; description?: string | null; active?: boolean };
+        Relationships: [];
       };
       specializations: {
         Row: {
@@ -243,6 +255,7 @@ export interface Database {
           active?: boolean;
         };
         Update: { name?: string; description?: string | null; active?: boolean };
+        Relationships: [];
       };
       history_log: {
         Row: {
@@ -260,9 +273,12 @@ export interface Database {
           event_type: HistoryEventType;
           metadata?: Json;
         };
-        Update: never;
+        Update: Record<never, never>;
+        Relationships: [];
       };
     };
+    Views: Record<never, never>;
+    Functions: Record<never, never>;
     Enums: {
       campaign_status: CampaignStatus;
       member_role: MemberRole;
