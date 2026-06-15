@@ -1,6 +1,7 @@
 'use client';
 
 import { useActionState } from 'react';
+import { Button } from '@/shared/ui';
 import { sendInviteAction } from '@/features/invitations/actions/invitation.actions';
 import type { ActionResult } from '@/shared/types/action-result';
 import type { Invite } from '@/domain/invitation/types';
@@ -11,25 +12,21 @@ export function InviteForm({ campaignId }: { campaignId: string }) {
   const [state, formAction, pending] = useActionState(sendInviteAction, initialState);
 
   return (
-    <form action={formAction} className="flex gap-2">
+    <form action={formAction} className="flex flex-col gap-2">
       <input type="hidden" name="campaignId" value={campaignId} />
-      <input
-        name="inviteeEmail"
-        type="email"
-        required
-        placeholder="E-mail do jogador"
-        className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-      />
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
-      >
-        {pending ? 'Enviando...' : 'Convidar'}
-      </button>
-      {!state.success && (
-        <p className="mt-1 text-sm text-red-600">{state.error}</p>
-      )}
+      <div className="flex gap-2">
+        <input
+          name="inviteeEmail"
+          type="email"
+          required
+          placeholder="E-mail do jogador"
+          className="h-[42px] flex-1 rounded-control border-2 border-stroke-subtle bg-input px-3 text-body text-content placeholder:text-content-secondary/70 focus:border-stroke-active focus:outline-none"
+        />
+        <Button type="submit" size="small" disabled={pending}>
+          {pending ? 'Enviando...' : 'Convidar'}
+        </Button>
+      </div>
+      {!state.success && <p className="text-small text-content">{state.error}</p>}
     </form>
   );
 }

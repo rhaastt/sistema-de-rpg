@@ -1,9 +1,12 @@
 import Link from 'next/link';
 import { requireAuthUser } from '@/shared/auth/session';
 import { createClient } from '@/infrastructure/supabase/server';
-import { getCampaignsForUser } from '@/features/campaigns/repositories/campaign.repository';
-import { CampaignCard } from '@/features/campaigns/components/CampaignCard';
+import {
+  getCampaignsForUser,
+  getActiveMemberCounts,
+} from '@/features/campaigns/repositories/campaign.repository';
 import { getPendingInvitesForUser } from '@/features/invitations/repositories/invitation.repository';
+import { CampaignsBrowser } from '@/features/campaigns/components/CampaignsBrowser';
 
 export default async function CampaignsPage() {
   const user = await requireAuthUser();
@@ -14,60 +17,38 @@ export default async function CampaignsPage() {
     getPendingInvitesForUser(supabase, user.id),
   ]);
 
-  const active = campaigns.filter((c) => c.status !== 'archived');
-  const archived = campaigns.filter((c) => c.status === 'archived');
+  const memberCounts = await getActiveMemberCounts(
+    supabase,
+    campaigns.map((c) => c.id),
+  );
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">Minhas campanhas</h1>
-        <Link href="/campaigns/new"
-          className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
-          Nova campanha
-        </Link>
-      </div>
-
+    <div className="space-y-6">
       {pendingInvites.length > 0 && (
-        <section>
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">
+        <div className="rounded-panel border-2 border-stroke-subtle bg-surface px-6 py-4">
+          <h2 className="mb-3 text-label font-semibold uppercase tracking-wide text-content-secondary">
             Convites pendentes
           </h2>
-          <ul className="space-y-2">
+          <ul className="flex flex-col gap-2">
             {pendingInvites.map((inv) => (
-              <li key={inv.id} className="flex items-center justify-between rounded-lg border border-yellow-200 bg-yellow-50 p-4">
-                <span className="text-sm text-gray-800">
-                  <strong>{inv.inviterName}</strong> convidou você para <strong>{inv.campaignName}</strong>
+              <li key={inv.id} className="flex items-center justify-between gap-3">
+                <span className="text-body text-content">
+                  <strong className="font-semibold">{inv.inviterName}</strong> convidou você para{' '}
+                  <strong className="font-semibold">{inv.campaignName}</strong>
                 </span>
-                <Link href={`/invitations/${inv.id}`}
-                  className="rounded-md border border-yellow-400 px-3 py-1 text-sm text-yellow-800 hover:bg-yellow-100">
+                <Link
+                  href={`/invitations/${inv.id}`}
+                  className="shrink-0 rounded-control border-2 border-stroke px-3 py-1.5 text-small text-content hover:bg-selected/40"
+                >
                   Ver convite
                 </Link>
               </li>
             ))}
           </ul>
-        </section>
+        </div>
       )}
 
-      {active.length === 0 && pendingInvites.length === 0 ? (
-        <p className="text-center text-sm text-gray-500 py-12">
-          Nenhuma campanha ainda. Crie uma ou aguarde um convite.
-        </p>
-      ) : (
-        <section>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {active.map((c) => <CampaignCard key={c.id} campaign={c} />)}
-          </div>
-        </section>
-      )}
-
-      {archived.length > 0 && (
-        <section>
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-400">Arquivadas</h2>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {archived.map((c) => <CampaignCard key={c.id} campaign={c} />)}
-          </div>
-        </section>
-      )}
+      <CampaignsBrowser campaigns={campaigns} memberCounts={memberCounts} />
     </div>
   );
 }

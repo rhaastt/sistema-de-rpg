@@ -7,6 +7,7 @@ export interface Campaign {
   ownerId: string;
   name: string;
   description: string | null;
+  imageUrl: string | null;
   status: CampaignStatus;
   archivedAt: string | null;
   createdAt: string;

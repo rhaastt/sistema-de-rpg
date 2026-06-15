@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+// A imagem é enviada como arquivo (.webp) e tratada fora do schema, na action.
 export const CreateCampaignSchema = z.object({
   name: z.string().min(1, 'Nome obrigatório').max(120, 'Máximo 120 caracteres'),
   description: z.string().max(2000, 'Máximo 2000 caracteres').optional(),

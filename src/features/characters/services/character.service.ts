@@ -1,13 +1,22 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { CelestiaClient } from '@/shared/types/supabase-client';
 import type { Database } from '@/shared/types/database';
 import type { Character, CharacterFullView } from '@/domain/character/types';
 import { UnauthorizedError, NotFoundError, ValidationError, ConflictError } from '@/shared/errors';
 import * as repo from '@/features/characters/repositories/character.repository';
 import * as memberRepo from '@/features/members/repositories/member.repository';
 import { getRaceByName, getClassById } from '@/infrastructure/repositories/ruleset.repository';
+import { insertHistoryEvent } from '@/infrastructure/repositories/history-log.repository';
 import type { CreateCharacterInput, UpdateCharacterAttributesInput, UpdateCharacterNarrativeInput } from '@/features/characters/schemas';
 
-type Client = SupabaseClient<Database>;
+type Client = CelestiaClient;
+
+async function log(supabase: Client, entry: Database['public']['Tables']['history_log']['Insert']): Promise<void> {
+  try {
+    await insertHistoryEvent(supabase, entry);
+  } catch {
+    // best-effort
+  }
+}
 
 // Restrição: classe Bruxa só para personagens do sexo feminino E raça Bruxa
 async function validateBruxaRestriction(
@@ -62,6 +71,13 @@ export async function createCharacter(
     { characterId: character.id, slot: '2', classId: input.slot2.classId, specializationId: input.slot2.specializationId },
   ]);
 
+  await log(supabase, {
+    campaign_id: input.campaignId,
+    actor_id: userId,
+    event_type: 'character_created',
+    metadata: { character_name: character.name, character_id: character.id },
+  });
+
   return character;
 }
 
@@ -97,13 +113,22 @@ export async function updateCharacterNarrative(
   if (!isMaster && !isOwner) throw new UnauthorizedError();
   if (!isMaster && character.sheetLocked) throw new ValidationError('A ficha está bloqueada');
 
-  return repo.updateCharacter(supabase, characterId, {
-    name: input.name,
-    visual_description: input.visualDescription,
-    background: input.background,
-    age: input.age,
-    image_url: input.imageUrl || null,
+  const updated = await repo.updateCharacter(supabase, characterId, {
+    ...(input.name !== undefined && { name: input.name }),
+    ...(input.visualDescription !== undefined && { visual_description: input.visualDescription }),
+    ...(input.background !== undefined && { background: input.background }),
+    ...(input.age !== undefined && { age: input.age }),
+    image_url: input.imageUrl ?? null,
   });
+
+  await log(supabase, {
+    campaign_id: character.campaignId,
+    actor_id: userId,
+    event_type: 'character_updated',
+    metadata: { character_name: character.name, character_id: characterId },
+  });
+
+  return updated;
 }
 
 export async function updateCharacterAttributes(
@@ -145,7 +170,16 @@ export async function lockCharacterSheet(
   const membership = await memberRepo.getMembership(supabase, character.campaignId, masterId);
   if (!membership || membership.role !== 'master') throw new UnauthorizedError('Apenas o mestre pode bloquear fichas');
 
-  return repo.updateCharacter(supabase, characterId, { sheet_locked: true });
+  const updated = await repo.updateCharacter(supabase, characterId, { sheet_locked: true });
+
+  await log(supabase, {
+    campaign_id: character.campaignId,
+    actor_id: masterId,
+    event_type: 'character_sheet_locked',
+    metadata: { character_name: character.name, character_id: characterId },
+  });
+
+  return updated;
 }
 
 export async function unlockCharacterSheet(
@@ -159,7 +193,16 @@ export async function unlockCharacterSheet(
   const membership = await memberRepo.getMembership(supabase, character.campaignId, masterId);
   if (!membership || membership.role !== 'master') throw new UnauthorizedError('Apenas o mestre pode desbloquear fichas');
 
-  return repo.updateCharacter(supabase, characterId, { sheet_locked: false });
+  const updated = await repo.updateCharacter(supabase, characterId, { sheet_locked: false });
+
+  await log(supabase, {
+    campaign_id: character.campaignId,
+    actor_id: masterId,
+    event_type: 'character_sheet_unlocked',
+    metadata: { character_name: character.name, character_id: characterId },
+  });
+
+  return updated;
 }
 
 export async function changeCharacterStatus(
@@ -174,5 +217,14 @@ export async function changeCharacterStatus(
   const membership = await memberRepo.getMembership(supabase, character.campaignId, masterId);
   if (!membership || membership.role !== 'master') throw new UnauthorizedError('Apenas o mestre pode alterar o estado do personagem');
 
-  return repo.updateCharacter(supabase, characterId, { status });
+  const updated = await repo.updateCharacter(supabase, characterId, { status });
+
+  await log(supabase, {
+    campaign_id: character.campaignId,
+    actor_id: masterId,
+    event_type: 'character_status_changed',
+    metadata: { character_name: character.name, character_id: characterId, new_status: status },
+  });
+
+  return updated;
 }

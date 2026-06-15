@@ -48,6 +48,7 @@ export async function createCharacterAction(formData: FormData): Promise<ActionR
 
 export async function updateCharacterNarrativeAction(
   characterId: string,
+  _prevState: ActionResult<Character>,
   formData: FormData,
 ): Promise<ActionResult<Character>> {
   try {

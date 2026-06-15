@@ -3,13 +3,14 @@ import { requireAuthUser } from '@/shared/auth/session';
 import { createClient } from '@/infrastructure/supabase/server';
 import { getMembership } from '@/features/members/repositories/member.repository';
 import { getRaces, getClasses, getAllSpecializations } from '@/infrastructure/repositories/ruleset.repository';
-import { CharacterForm } from '@/features/characters/components/CharacterForm';
+import { CharacterCreationWizard } from '@/features/characters/components/CharacterCreationWizard';
 
 export default async function NewCharacterPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: campaignId } = await params;
   const user = await requireAuthUser();
   const supabase = await createClient();
 
+  // Apenas jogadores participantes criam personagem (mestres não criam).
   const membership = await getMembership(supabase, campaignId, user.id);
   if (!membership || membership.role === 'master') notFound();
 
@@ -20,9 +21,8 @@ export default async function NewCharacterPage({ params }: { params: Promise<{ i
   ]);
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <h1 className="text-xl font-bold">Criar personagem</h1>
-      <CharacterForm
+    <div className="mx-auto max-w-4xl">
+      <CharacterCreationWizard
         campaignId={campaignId}
         races={races}
         classes={classes}

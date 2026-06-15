@@ -1,11 +1,20 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { CelestiaClient } from '@/shared/types/supabase-client';
 import type { Database } from '@/shared/types/database';
 import { UnauthorizedError, NotFoundError, ValidationError } from '@/shared/errors';
 import * as memberRepo from '@/features/members/repositories/member.repository';
 import * as characterRepo from '@/features/characters/repositories/character.repository';
 import { getCampaignById } from '@/features/campaigns/repositories/campaign.repository';
+import { insertHistoryEvent } from '@/infrastructure/repositories/history-log.repository';
 
-type Client = SupabaseClient<Database>;
+type Client = CelestiaClient;
+
+async function log(supabase: Client, entry: Database['public']['Tables']['history_log']['Insert']): Promise<void> {
+  try {
+    await insertHistoryEvent(supabase, entry);
+  } catch {
+    // best-effort
+  }
+}
 
 export async function removeMember(
   supabase: Client,
@@ -28,4 +37,11 @@ export async function removeMember(
   }
 
   await memberRepo.softRemoveMember(supabase, campaignId, targetUserId);
+
+  await log(supabase, {
+    campaign_id: campaignId,
+    actor_id: masterId,
+    event_type: 'member_removed',
+    metadata: { removed_user_id: targetUserId },
+  });
 }

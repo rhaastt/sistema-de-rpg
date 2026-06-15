@@ -505,6 +505,35 @@ LockCharacterSheet
 ChangeCharacterStatus
 ```
 
+### 12.1 Fluxo de migrations
+
+- Arquivos em `supabase/migrations/` no formato `NNNN_nome.sql`, ordem crescente;
+- Aplicar primeiro no banco local; registrar a versão em `supabase_migrations.schema_migrations` (a CLI faz isso em `db push`/`reset`);
+- Nunca editar uma migration já aplicada — criar uma nova;
+- Seeds idempotentes em `supabase/seeds/` (carregados por `config.toml` → `[db.seed].sql_paths = ["./seeds/*.sql"]`).
+
+### 12.2 Testes
+
+- Suíte de integração em `tests/integration/` roda contra o Supabase local (`npm test`);
+- Validar permissões pelo comportamento de RLS com usuário autenticado, não por mock;
+- Detalhes em `docs/specs/testing.md`. Toda nova policy/fluxo crítico ganha teste antes de concluir a tarefa.
+
+### 12.3 Upload de imagens
+
+Qualquer envio de imagem (campanha, personagem, futuros) segue um padrão único:
+bucket público por entidade, WebP até 2 MB, caminho `{auth.uid()}/{uuid}.webp`,
+upload/remoção via Server Action. Antes de criar um novo fluxo de imagem, seguir
+o checklist em `docs/specs/image-uploads.md`.
+
+### 12.4 ⚠️ Gotcha de RLS: `insert(...).select()`
+
+`insert(...).select()` (RETURNING) exige que a policy de **SELECT** aprove a linha
+recém-criada. Se essa policy depender de uma função `STABLE`
+(`is_campaign_member`) que precisa ver uma linha criada por trigger no mesmo
+statement, ela falha com `42501` mesmo com o `WITH CHECK` ok. Solução: garantir um
+caminho de SELECT direto pelo dono (`owner_id`/`user_id = auth.uid()`). Ver
+`docs/specs/security-rls.md` §5.
+
 ---
 
 ## 13. Testes obrigatórios
@@ -525,11 +554,18 @@ Priorizar testes de:
 
 Não priorizar testes visuais complexos antes das regras de acesso.
 
+A suíte atual (Vitest contra o Supabase local) e como rodá-la estão em
+`docs/specs/testing.md`. Estado: 24 testes cobrindo os itens acima.
+
 ---
 
 ## 14. Ordem de implementação
 
-### Fase 1 — Fundação
+> **Status (2026-06-15):** Fases 1, 2 e 3 concluídas e validadas por testes de
+> integração (migrations `0001`–`0015`). A Fase 4 é o próximo passo. Detalhe das
+> policies em `docs/specs/security-rls.md` e dos testes em `docs/specs/testing.md`.
+
+### Fase 1 — Fundação ✅
 
 - Configuração do projeto;
 - Supabase Auth;
@@ -540,7 +576,7 @@ Não priorizar testes visuais complexos antes das regras de acesso.
 - Convites;
 - RLS base.
 
-### Fase 2 — Personagem
+### Fase 2 — Personagem ✅
 
 - Seeds mínimos de raça, classe e especialização;
 - Criação de personagem;
@@ -551,7 +587,7 @@ Não priorizar testes visuais complexos antes das regras de acesso.
 - Edição narrativa;
 - Bloqueio da ficha.
 
-### Fase 3 — Administração
+### Fase 3 — Administração ✅
 
 - Remover jogador;
 - Marcar personagem como morto;
@@ -560,6 +596,8 @@ Não priorizar testes visuais complexos antes das regras de acesso.
 - Revisão das políticas de segurança.
 
 ### Fase 4 — Expansões do ruleset
+
+> Plano de construção e pendências em `docs/specs/phase-4-ruleset.md`.
 
 Somente depois de validar as fases anteriores:
 
@@ -595,7 +633,10 @@ Notas de modelagem:
 - O slot de anéis e colares libera novas posições em `inventory` (equipáveis), não consumindo os 16 slots da mochila;
 - Níveis acima de 6 e a continuação da curva ficam como questão em aberto até o mestre definir.
 
-As regras detalhadas dessas expansões estão no documento de MVP completo (`mvp-celestia.md`) e no Compêndio Celestia. O `.claude` mantém apenas o MVP estrutural; o ruleset completo entra por fase.
+As regras detalhadas dessas expansões devem ser consolidadas em
+`docs/specs/phase-4-ruleset.md` (a partir do Compêndio Celestia) antes da
+implementação. O `.claude` mantém apenas o MVP estrutural; o ruleset completo
+entra por fase.
 
 ---
 
