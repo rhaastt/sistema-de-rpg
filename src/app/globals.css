@@ -1,1 +1,105 @@
 @import "tailwindcss";
+
+/* ============================================================
+   Design System — Celestia
+   Tokens em Tailwind v4 (@theme). Nomes semânticos geram as
+   utilities (bg-surface, text-content, border-stroke, rounded-card…).
+   A escala de espaçamento (spacing/1..16 = 4..64px) já corresponde
+   à escala padrão do Tailwind (p-1=4px … p-16=64px).
+   ============================================================ */
+
+@theme {
+  /* ---- Cores primitivas (referência) ---- */
+  --color-celestia-background: #f4efe4;
+  --color-celestia-surface: #faf7ef;
+  --color-celestia-text-primary: #241f1a;
+  --color-celestia-text-secondary: #6d645a;
+  --color-celestia-border: #756a5d;
+  --color-celestia-border-soft: #ddd4c5;
+  --color-celestia-accent: #b8a98f;
+
+  /* ---- Cores semânticas (uso na UI) ---- */
+  --color-page: #f4efe4; /* surface/page    -> bg-page */
+  --color-surface: #faf7ef; /* surface/card    -> bg-surface */
+  --color-input: #faf7ef; /* surface/input   -> bg-input */
+  --color-selected: #ddd4c5; /* surface/selected-> bg-selected */
+
+  --color-content: #241f1a; /* content/primary   -> text-content */
+  --color-content-secondary: #6d645a; /* content/secondary -> text-content-secondary */
+  --color-content-inverse: #f4efe4; /* content/inverse   -> text-content-inverse */
+
+  --color-stroke: #756a5d; /* stroke/default -> border-stroke */
+  --color-stroke-subtle: #ddd4c5; /* stroke/subtle  -> border-stroke-subtle */
+  --color-stroke-active: #241f1a; /* stroke/active  -> border-stroke-active */
+
+  --color-accent: #b8a98f; /* destaques discretos -> bg-accent/text-accent */
+  --color-white: #ffffff;
+
+  /* Recursos do personagem — tons terrosos que harmonizam com a paleta */
+  --color-life: #a6442e; /* vida (vermelho tijolo) -> bg-life */
+  --color-mana: #4d6e8a; /* mana (azul ardósia)    -> bg-mana */
+
+  /* ---- Tipografia ---- */
+  --font-sans: var(--font-inter), Arial, sans-serif;
+  --font-serif: Georgia, "Times New Roman", serif;
+
+  /* Títulos (Georgia, bold) */
+  --text-display: 2.125rem; /* 34px */
+  --text-display--line-height: 1.15;
+  --text-page: 1.625rem; /* 26px */
+  --text-page--line-height: 1.2;
+  --text-section: 1.3125rem; /* 21px */
+  --text-section--line-height: 1.25;
+  --text-card-title: 1.1875rem; /* 19px */
+  --text-card-title--line-height: 1.3;
+
+  /* Interface (Inter) */
+  --text-body-lg: 1.0625rem; /* 17px */
+  --text-body-lg--line-height: 1.5;
+  --text-body: 0.9375rem; /* 15px */
+  --text-body--line-height: 1.5;
+  --text-small: 0.8125rem; /* 13px */
+  --text-small--line-height: 1.45;
+  --text-label: 0.75rem; /* 12px */
+  --text-label--line-height: 1.4;
+
+  /* ---- Radius ---- */
+  --radius-small: 3px; /* checkbox */
+  --radius-control: 6px; /* campos e botões */
+  --radius-default: 8px; /* imagens */
+  --radius-card: 10px; /* cards */
+  --radius-panel: 12px; /* sidebar e cabeçalhos */
+  --radius-full: 999px; /* avatares e indicadores */
+}
+
+/* ---- Dimensões de layout (tokens fora do @theme; usar via var()) ---- */
+:root {
+  --layout-page-padding: 40px;
+  --layout-header-height: 64px;
+  --layout-sidebar-width: 220px;
+  --layout-input-height: 50px;
+  --layout-button-height: 46px;
+
+  /* Larguras de borda semânticas */
+  --border-thin: 1px; /* divisórias internas */
+  --border-default: 2px; /* cards, botões, campos, painéis */
+  --border-active: 3px; /* aba ativa */
+  --border-emphasis: 5px; /* barras de vida e mana */
+}
+
+@layer base {
+  body {
+    background-color: var(--color-page);
+    color: var(--color-content);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-serif);
+    font-weight: 700;
+  }
+}
