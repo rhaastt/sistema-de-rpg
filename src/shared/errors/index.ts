@@ -36,5 +36,10 @@ export class ValidationError extends DomainError {
 export function domainErrorMessage(error: unknown): string {
   if (error instanceof DomainError) return error.message;
   if (error instanceof Error) return error.message;
+  // PostgrestError from Supabase is a plain object with a message property
+  if (typeof error === 'object' && error !== null && 'message' in error) {
+    const msg = (error as Record<string, unknown>).message;
+    if (typeof msg === 'string') return msg;
+  }
   return 'Erro inesperado';
 }

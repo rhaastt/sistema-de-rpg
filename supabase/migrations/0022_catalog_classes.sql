@@ -1,3 +1,10 @@
+-- ============================================================
+-- Catálogo de referência — promovido de seed para migration
+-- ============================================================
+-- Dados de referência exigidos pelo app (não dados de teste).
+-- Ficam em migration para aplicarem em qualquer ambiente via
+-- 'supabase db push' — o push NÃO roda seeds. Idempotente.
+
 -- Seed idempotente de classes e especializações Celestia
 -- As especializações são registros vinculados à classe; não enums rígidos.
 

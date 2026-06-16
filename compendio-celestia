@@ -1,0 +1,473 @@
+# Compêndio: RPG Celestia
+
+> Catálogo do ruleset do RPG **Celestia** e referência de domínio para o sistema. Acompanha o `.claude` (guia operacional, MVP estrutural) e o `mvp-celestia.md` (especificação completa do ruleset).
+
+**Status do projeto (15/06/2026)**
+- Fases 1–3 do `.claude` concluídas: campanhas, participantes, convites, personagens, multiclasse no nível 1, restrição da classe Bruxa, bloqueio de ficha, remoção de jogador, arquivamento, RLS base.
+- Fase 4 (expansões do ruleset) ainda não implementada: vida, perícias, inventário, XP/níveis, evolução, passivas e bônus raciais.
+
+Este compêndio descreve o **ruleset completo**. O `.claude` define o que dele já é executado pelo sistema e o que ainda é apenas referência narrativa.
+
+---
+
+## 1. O Mundo
+
+Cenário de **fantasia com tom de horror**, dividido em reinos, com raças, classes e perícias próprias.
+
+### Reinos conhecidos
+- **Altária** (com a região montanhosa de **Galalad**)
+- **Kattawood** (terra dos Anumanos, os meio humano/animal)
+- **Leondor**
+- **Barioth**
+
+Lista de cidades por reino ainda em aberto (faltam Leondor e Barioth).
+
+---
+
+## 2. Atributos e Vida
+
+### Atributos (6)
+Força, Destreza, Constituição, Inteligência, **Mente**, Carisma.
+
+- Cada raça concede um total de **Pontos de Atributo** (pool inicial) e modificadores fixos por atributo.
+- O jogador distribui o pool entre os 6 atributos na criação.
+- **Fórmula do valor final** (cada atributo): `distribuído + bônus_racial + evolução`.
+- **Perícias não alteram atributos.** Elas apenas verificam requisitos.
+- No MVP estrutural atual, os 6 atributos já existem em `character_attributes` mas são preenchidos manualmente. Pool, bônus e validações entram na fase 4.
+
+### Vida (HP) — fase 4
+Derivada da Constituição final.
+
+```
+vida_máxima = 100 + (Constituição_final × 10)
+```
+
+| Constituição final | Vida máxima |
+|---:|---:|
+| 0 | 100 |
+| 1 | 110 |
+| 5 | 150 |
+| 8 | 180 |
+| 10 | 200 |
+
+- A vida atual é controlada pelo mestre (sem automação de combate).
+- Limites: `0 ≤ vida_atual ≤ vida_máxima`.
+- O jogador enxerga só o percentual; o mestre vê os valores absolutos; outros jogadores não veem nada da vida.
+- Mudança em Constituição recalcula a vida máxima (e ajusta a atual na diferença ou limita à nova máxima).
+
+### Capacidade de carga — fase 4
+```
+capacidade (kg) = 10 + valor final de Força
+```
+Mochila com **16 espaços fixos**. Slots de anéis e colares ficam separados (liberados no nível 2).
+
+---
+
+## 3. Progressão (XP e níveis) — fase 4
+
+XP é concedido apenas pelo mestre. O nível é **calculado automaticamente** a partir do XP acumulado, via tabela `level_progression` (configuração/seed, sem `if/else` no código).
+
+| Nível | XP necessário (acumulado) | Ganhos ao atingir o nível |
+|---:|---:|---|
+| 1 | 0 | inicial (criação) |
+| 2 | 100 | +3 pontos de atributo; +2 habilidades de classe; libera slot de anéis e colares nos equipáveis |
+| 3 | 200 | +1 perícia; +4 em Mente; reconhecimento no mundo (mais influência e confiança) |
+| 4 | 500 | +3 pontos de atributo; +2 habilidades de classe |
+| 5 | 1200 | +1 habilidade especial de classe |
+| 6 | 3000 | +1 perícia; +4 em Mente; reconhecimento no mundo |
+
+Leituras importantes:
+- "+N em Mente" é ganho de atributo via trilha de evolução (entra em `evolução`, não em distribuição).
+- "+1 perícia" segue o modelo de requisito (precisa cumprir o requisito do atributo).
+- "+N habilidades de classe" abrem escolhas; em multiclasse, o jogador decide de qual das duas classes recebe naquele nível.
+- "Reconhecimento no mundo" é marcador narrativo no histórico, sem efeito mecânico automático.
+- Níveis 7+ em aberto até o mestre definir.
+
+---
+
+## 4. Raças
+
+Catálogo de referência. No MVP estrutural, raças aparecem como dados de catálogo simples (`id, name, description, active`); bônus e passivas ficam no `description` por enquanto. A automação entra na fase 4.
+
+Salvo indicação, todas começam com **12 Pontos de Atributo**.
+
+### Elfos
+
+#### Elfo Puro
+- **Pontos de Atributo:** 12 | **Bônus:** +2 Destreza, +3 Inteligência, −2 Carisma, −2 Força
+- **Passivas:** Visão no Escuro, Conhecimento de Runas (lê e interpreta inscrições rúnicas antigas)
+
+#### Meio-Elfo
+- **Pontos de Atributo:** 14 | **Bônus:** +3 Destreza, −1 Carisma
+- **Passivas:** Visão no Escuro
+
+#### Elfo do Deserto
+- **Pontos de Atributo:** 12 | **Bônus:** +3 Constituição, +1 Força, −3 Destreza, −1 Carisma
+- **Passivas:** Visão no Escuro, Resistência ao Calor
+
+#### Elfo de Gelo
+- **Pontos de Atributo:** 12 | **Bônus:** +3 Destreza, −3 Constituição
+- **Passivas:** Visão no Escuro, Resistência ao Frio
+
+### Ogros
+
+#### Ogro Puro
+- **Pontos de Atributo:** 12 | **Bônus:** +3 Força, +4 Constituição, −5 Inteligência, −3 Destreza
+- **Passivas:** Brutamontes (entra com origem `racial`, não consome escolha de perícia)
+
+#### Meio-Ogro
+- **Pontos de Atributo:** 14 | **Bônus:** +2 Força, +2 Constituição, −2 Inteligência, −1 Destreza
+- **Passivas:** Brutamontes
+
+#### Ogro do Deserto
+- **Pontos de Atributo:** 12 | **Bônus:** +2 Força, +3 Constituição, −4 Inteligência, −2 Destreza
+- **Passivas:** Resistência ao Calor, Brutamontes
+
+#### Ogro das Cavernas
+- **Pontos de Atributo:** 12 | **Bônus:** +2 Força, +3 Constituição, −4 Inteligência, −2 Destreza
+- **Passivas:** Visão no Escuro, Brutamontes
+
+### Goblins
+
+#### Goblin Puro
+- **Pontos de Atributo:** 12 | **Bônus:** +3 Destreza, +7 Mente, −5 Força, −5 Constituição
+- **Passivas:** Mentalidade de Horda (+3 status temporário por cada Goblin Puro extra no mesmo combate; interpretado pelo mestre)
+
+#### Grangoblin
+- **Pontos de Atributo:** 12 | **Bônus:** +4 Força, +3 Constituição, −3 Destreza, −5 Inteligência
+- **Passivas:** nenhuma
+
+#### Goblin Gurin
+- **Pontos de Atributo:** 12 | **Bônus:** +5 Inteligência, +10 Mente, −5 Constituição, −4 Força
+- **Passivas:** nenhuma
+
+### Anões
+
+#### Anão das Cavernas
+- **Pontos de Atributo:** 12 | **Bônus:** +4 Inteligência, +3 Força, +1 Constituição, −3 Destreza
+- **Passivas:** Visão no Escuro, Afinidade com Construções, Conhecimento de Materiais
+
+#### Anão das Montanhas
+- **Pontos de Atributo:** 12 | **Bônus:** +4 Força, +3 Constituição, +2 Inteligência, −3 Destreza
+- **Passivas:** Afinidade com Ferraria, Conhecimento de Materiais
+
+### Outras Raças
+
+#### Humano
+- **Pontos de Atributo:** 16 | **Bônus:** nenhum
+- **Passivas:** +1 Perícia na criação (3 em vez de 2), Adaptabilidade ao Ambiente, Determinação ao Cair (rola dado para se levantar ao chegar a 0 em vez de ser eliminado)
+
+#### Golem
+- **Pontos de Atributo:** 12 | **Bônus:** +6 Constituição, −7 Destreza
+- **Passivas:** Escudo Mágico (anula o primeiro golpe de magia do combate; recarrega ao fim de cada combate)
+
+#### Kobolt
+- **Pontos de Atributo:** 12 | **Bônus:** +3 Destreza, −3 Constituição, −6 Mente
+- **Passivas:** Resistência ao Frio, Olfato Aprimorado
+
+#### Ninfa
+- **Pontos de Atributo:** 12 | **Bônus:** +7 Inteligência, −6 Constituição
+- **Passivas:** Afinidade Elemental (fogo, água, terra ou ar), Falar com os Animais
+
+#### Bruxa
+- **Pontos de Atributo:** 12 | **Bônus:** nenhum | **Condição:** somente mulheres
+- **Passivas:** Skills Próprias (conjunto exclusivo definido na criação)
+- **Importante:** a **classe Bruxa** só é selecionável por personagens desta raça (ver seção 5). A restrição é validada no servidor desde o MVP estrutural.
+
+#### Tiefling
+- **Pontos de Atributo:** 12 | **Bônus:** +3 Destreza, −2 Carisma
+- **Passivas:** Visão no Escuro, Detecção de Bem e Mal
+
+#### Gnomo
+- **Pontos de Atributo:** 12 | **Bônus:** +5 Inteligência, +5 Mente, −7 Constituição
+- **Passivas:** nenhuma
+
+#### Lagarto
+- **Pontos de Atributo:** 12 | **Bônus:** +3 Destreza, −3 Constituição
+- **Passivas:** Resistência ao Calor +2, Fraqueza ao Frio −3, Detectar Presença (seres vivos em movimento)
+
+#### Draconato
+- **Pontos de Atributo:** 12 | **Bônus:** +5 Constituição, +3 Força, −3 Inteligência
+- **Passivas:** Imunidade ao Fogo Natural, Resistência ao Calor +5, Fraqueza ao Frio −6, Polimorfia para Partes de Dragão (garras, escamas, cauda, asas rudimentares)
+
+#### Whipear
+- **Pontos de Atributo:** 12 | **Bônus:** nenhum
+- **Passivas:** Visão no Escuro, Buff Noturno +6 (todos os atributos exceto Mente), Debuff Diurno −6, Hemomancia (manipula sangue para curar, atacar ou enfraquecer)
+
+#### Serpirion
+- **Pontos de Atributo:** 12 | **Bônus:** +7 Destreza, −4 Constituição, −2 Força
+- **Passivas:** Resistência ao Calor, Fraqueza ao Frio, Detectar Presença, Fingir de Morto, Fatalidade (no furtivo, 20 natural mata o inimigo instantaneamente)
+
+### Anumanos *(em desenvolvimento)*
+
+> Qualquer meio humano/animal de **Kattawood**. Status no MVP em aberto (liberar como jogáveis ou manter seed inativo).
+
+#### Anumano Diffo
+- **Pontos de Atributo:** 12 | **Bônus:** +5 Força, +3 Inteligência, +7 Mente, −4 Destreza, −5 Constituição
+- **Passivas:** Audição Aprimorada, Visão de Terreno Aprimorada (campo panorâmico), Detecção de Perigo
+
+#### Anumano Feral
+- **Pontos de Atributo:** 12 | **Bônus:** +4 Força, +4 Destreza, −5 Constituição, −3 Carisma
+- **Passivas:** Audição Apurada, Olfato Apurado, Perícia de Acrobacia (depende da linhagem animal)
+
+#### Anumano Gwyrá
+- **Pontos de Atributo:** 12 | **Bônus:** +7 Destreza, +4 Mente, −5 Força, −5 Constituição
+- **Passivas:** Foco Ocular (visão de ave de rapina), Vôo (asas funcionais)
+
+#### Anumano Kãngues
+- **Pontos de Atributo:** 12 | **Bônus:** +8 Constituição, +5 Força, −6 Destreza, −5 Mente
+- **Passivas:** Respiração Subaquática, Visão Subaquática, Vantagem em Combate Aquático
+
+---
+
+## 5. Classes e Especializações
+
+Doze **categorias de classe**. Cada categoria reúne especializações, e cada especialização (subclasse) tem um **atributo primário**. Esse campo é referência: o sistema registra, o mestre interpreta (sem automação de efeito).
+
+> **Regra de nível 1 (já implementada):** o personagem escolhe **duas categorias de classe**, cada uma com sua especialização. Modeladas em `character_classes` com slot 1 e 2, peso igual entre elas. A especialização precisa pertencer à classe do mesmo slot.
+
+> **Restrição da classe Bruxa (já implementada):** só selecionável por personagens do sexo feminino **e** da raça Bruxa. Validação no servidor.
+
+**Guerreiro** — Combatente de confronto direto, resistência e domínio de armas.
+
+| Especialização | Primário | Descrição |
+|---|---|---|
+| Espadachim | Destreza | Especialista em espadas: velocidade, precisão e técnica |
+| Mestre das Armas | Destreza | Usa armas diferentes e adapta o estilo à situação |
+| Berserk | Força | Troca controle e defesa por explosões ofensivas |
+| Bestial | Força | Luta instintiva, agressiva, inspirada em feras |
+| Místico | Inteligência | Treino físico com runas, energia espiritual ou técnicas sobrenaturais |
+| Avatar | Inteligência | Canaliza uma força superior, elemental ou espiritual |
+| Draconiano | Constituição | Resistência e técnicas inspiradas em dragões |
+| Duelista | Destreza | Combates individuais, precisão e contra-ataques |
+| Bárbaro | Força | Força constante, resistência e sobrevivência |
+
+**Paladino** — Guerreiro ligado a um juramento, causa, divindade ou ideal.
+
+| Especialização | Primário | Descrição |
+|---|---|---|
+| Pacto de Devoção | Constituição | Código rígido de honra, proteção e lealdade |
+| Pacto de Vingança | Força | Persegue e pune inimigos ligados ao juramento |
+| Curandeiro | Inteligência | Devoção em sustentar e proteger aliados |
+| Templário | Constituição | Disciplinado contra ameaças profanas ou mágicas |
+| Cavaleiro | Constituição | Liderança, defesa e proteção do grupo |
+| Lanceiro | Força | Controla distância e avanço inimigo com armas de haste |
+
+**Arqueiro** — Combatente de longa distância: precisão, observação e mobilidade.
+
+| Especialização | Primário | Descrição |
+|---|---|---|
+| Mágico | Inteligência | Encanta flechas e projéteis com efeitos arcanos |
+| Mecânico | Inteligência | Arcos modificados, mecanismos e munições especiais |
+| Caçador de Feras | Destreza | Rastreia, estuda e enfrenta criaturas selvagens |
+| Elemental | Destreza | Imbui disparos com forças elementais |
+| Armadilheiro | Inteligência | Armadilhas, emboscadas e zonas de controle |
+| Patrulheiro | Destreza | Explora e protege territórios, recon e sobrevivência |
+
+**Ladino** — Mobilidade, furtividade, infiltração e exploração de oportunidades.
+
+| Especialização | Primário | Descrição |
+|---|---|---|
+| Sanguinário | Destreza | Alvos vulneráveis, ataques rápidos e agressivos |
+| Passo Sombrio | Destreza | Furtividade e aproximações inesperadas |
+| Venenoso | Destreza | Produz e usa venenos, toxinas e debilitantes |
+| Mercenário | Destreza | Adapta técnicas conforme contrato e recompensa |
+| Vingador | Destreza | Investiga um alvo e explora fraquezas |
+| Arremessador | Destreza | Facas, lâminas, bombas e objetos arremessáveis |
+| Explorador | Destreza | Ruínas, passagens secretas, fechaduras, ambientes perigosos |
+
+**Mago** — Magia por estudo, conhecimento, símbolos e fórmulas.
+
+| Especialização | Primário | Descrição |
+|---|---|---|
+| Arquimago | Inteligência | Domínio amplo sobre diferentes escolas de magia |
+| Temporal | Inteligência | Manipula duração, velocidade e tempo |
+| Tecnomago | Inteligência | Combina magia, tecnologia e dispositivos |
+| Elementarista | Inteligência | Estudo e controle dos elementos |
+| Mago de Batalha | Inteligência | Magia em confronto direto, proteção e ofensiva |
+| Pintor | Inteligência | Desenhos, tintas e imagens viram manifestações mágicas |
+| Mago de Sangue | Inteligência | Energia vital como componente de rituais |
+| Construtor | Inteligência | Barreiras, estruturas, objetos e servos arcanos |
+
+**Feiticeiro** — Magia por talento natural, linhagem, pacto ou transformação.
+
+| Especialização | Primário | Descrição |
+|---|---|---|
+| Invocador | Inteligência | Convoca criaturas, entidades ou manifestações |
+| Mentalista | Carisma | Atua sobre pensamentos, emoções, memórias e percepção |
+| Herbalista | Inteligência | Plantas e elementos naturais para efeitos mágicos |
+| Alquimista | Inteligência | Produz poções e compostos por processos mágicos |
+| Dracônico | Inteligência | Poder de linhagem ou conexão com dragões |
+
+**Clérigo** — Representante de fé, divindade, filosofia ou força espiritual.
+
+| Especialização | Primário | Descrição |
+|---|---|---|
+| Defensor | Constituição | Protege aliados com bênçãos, barreiras e resistência |
+| Inquisidor | Força | Investiga e combate heresias e ameaças ocultas |
+| Iluminado | Inteligência | Compreensão espiritual, revela verdades ocultas |
+| Sacerdote | Inteligência | Líder religioso, conselheiro e representante da fé |
+
+**Druida** — Guardião da natureza, das criaturas e dos ciclos naturais.
+
+| Especialização | Primário | Descrição |
+|---|---|---|
+| Sentinela | Constituição | Protege territórios naturais e resiste a invasores |
+| Xamã | Inteligência | Comunica-se com espíritos, ancestrais e forças naturais |
+| Executor | Força | Força punitiva da natureza |
+| Bestial | Força | Instintos, sentidos e capacidades de animais |
+| Domador | Carisma | Cria vínculos e atua ao lado de criaturas |
+| Metamorfo | Carisma | Assume formas animais ou altera o corpo |
+
+**Atirador** — Armas de fogo, equipamentos e controle de distância.
+
+| Especialização | Primário | Descrição |
+|---|---|---|
+| Rastreador | Destreza | Persegue alvos por observação e leitura de rastros |
+| Caçador de Recompensas | Inteligência | Localiza, captura ou elimina alvos por contrato |
+| Bombardeiro | Inteligência | Explosivos, artilharia e grande impacto |
+| Elemental | Destreza | Munições/armas com energia elemental |
+| Pirotécnico | Inteligência | Fogo, explosões controladas, incendiários |
+| Elite | Destreza | Atirador treinado, preciso e disciplinado |
+| Maquinista | Inteligência | Constrói e mantém armas, torres e mecanismos |
+| Gunlancer | Constituição | Armamento pesado, resistência e combate próximo |
+
+**Bruxa** — Magia de pactos, rituais, maldições e forças instáveis. *(Bruxas só podem ser mulheres e da raça Bruxa.)*
+
+| Especialização | Primário | Descrição |
+|---|---|---|
+| Sangue | Inteligência | Manipula o próprio sangue e o ambiente |
+| Caos | Inteligência | Distorções e efeitos mágicos imprevisíveis |
+| Morte | Inteligência | Espíritos, energia vital, decadência e mortos |
+
+**Lutador** — Usa o próprio corpo, disciplina física e improvisação.
+
+| Especialização | Primário | Descrição |
+|---|---|---|
+| Marcial | Destreza | Golpes, posturas e combinações corporais |
+| Monge | Constituição | Disciplina corporal, resistência e autocontrole |
+| Utilitário | Inteligência | Manobras de suporte, mobilidade e controle |
+| Sucateiro | Inteligência | Improvisa armas e ferramentas com material achado |
+
+**Bardo** — Artista, comunicador e investigador que influencia por expressão e conhecimento.
+
+| Especialização | Primário | Descrição |
+|---|---|---|
+| Musicista | Carisma | Instrumentos, composição e conhecimento musical |
+| Cantor | Carisma | Voz para inspirar, emocionar, persuadir ou intimidar |
+| Dançarino | Carisma | Expressão artística, ritmo, movimento e agilidade |
+| Investigador | Inteligência | Reúne informações e conecta pistas |
+
+---
+
+## 6. Perícias — fase 4
+
+Perícias são **capacidades registradas na ficha**. O sistema não interpreta nem executa seus efeitos: quem aplica é o mestre.
+
+**Regra central**: o número de uma perícia é um **requisito de atributo (valor mínimo)**, **não** um bônus. Ex: Resiliência exige Constituição final ≥ 3; ela não concede Constituição nem aumenta a vida.
+
+**Quantidade na criação**: 2 perícias por padrão. **Humano** é a única raça que pode ter 3 (pela passiva +1 Perícia). Perícias raciais não contam nesse limite.
+
+**Catálogo (seed)**
+
+| Categoria | Perícia | Requisito |
+|---|---|---|
+| Força | Arremesso de Objetos Pesados | Força ≥ 3 |
+| Constituição | Brutamontes | Constituição ≥ 5 (pode ser racial, ex: Ogros) |
+| Constituição | Resiliência | Constituição ≥ 3 |
+| Constituição | RM/RF | Constituição ≥ 3 |
+| Constituição | Perseverança | Constituição ≥ 3 |
+| Constituição | Sobrevivência | Constituição ≥ 2 |
+| Destreza | Acrobata | Destreza ≥ 3 |
+| Destreza | Abrir Fechaduras | Destreza ≥ 2 |
+| Destreza | Furtividade | Destreza ≥ 3 |
+| Destreza | Ambidestro | Destreza ≥ 3 |
+| Destreza | Iniciativa | Destreza ≥ 2 |
+| Carisma | Adestrar Animais | Carisma ≥ 3 |
+| Carisma | Negociar | Carisma ≥ 3 |
+| Carisma | Tocar Instrumentos | Carisma ≥ 2 |
+| Carisma | Falar com Animais | Carisma ≥ 2 |
+| Carisma | Atuação | Carisma ≥ 3 |
+| Carisma | Detetive | Carisma ≥ 3 |
+| Inteligência | Decifrar Objetos | Inteligência ≥ 3 |
+| Inteligência | Telecinese | Inteligência ≥ 3 |
+| Inteligência | Detectar Pensamentos | Inteligência ≥ 2 |
+| Inteligência | Afinidade Elemental | Inteligência ≥ 2 (registra elemento: fogo/água/terra/ar) |
+| Sem requisito | Conhecimento de Alquimia | nenhum |
+| Sem requisito | Culinária | nenhum |
+| Especial | Lobo Solitário | sem requisito; cita "+5 no dano" mas não é calculado pelo sistema |
+
+**Origem de cada perícia**: `racial`, `classe`, `criação`, `evolução` ou `mestre`. Perícias raciais não consomem escolhas normais de criação.
+
+**Atributo cai depois da aquisição**: o sistema não remove a perícia automaticamente. Sinaliza que o requisito atual não é atendido, mantém a perícia registrada e deixa o mestre decidir ativa/inativa.
+
+---
+
+## 7. Relíquias
+
+Itens narrativos especiais (ex: **Sino do Vigia Morto**). Tratados como itens protegidos concedidos pelo mestre, não descartáveis pelo jogador. Fora do fluxo livre de criação.
+
+---
+
+## 8. Personagem 1: O Caçador (atual)
+
+| Campo | Decisão |
+|---|---|
+| Raça | Humano |
+| Classes (nível 1) | Guerreiro / Duelista + (a definir 2ª classe) |
+| Origem | Montanhas de Galalad, fora dos muros de Altária |
+| Estilo | Tank + furtivo (resistente, mas calculado e silencioso) |
+| Perícias intencionadas | Resiliência (Con ≥ 3), Furtividade (Des ≥ 3) — entram na fase 4 |
+| Relíquia | Sino do Vigia Morto |
+
+**Backstory**
+Caçador criado nas encostas geladas de Galalad. Encontrou o sino numa masmorra inexplorada ao norte. Desde então, o sino nunca parou de tocar em certos lugares.
+
+**Pendências**
+- Nome do personagem
+- Segunda categoria de classe + especialização (regra de nível 1)
+- Distribuição dos 16 Pontos de Atributo (Humano) + escolha da 3ª perícia (passiva racial)
+
+---
+
+## 9. Personagem 2: O Alquimista (atual)
+
+| Campo | Decisão |
+|---|---|
+| Raça | Humano |
+| Classes (nível 1) | Feiticeiro / Alquimista + (a definir 2ª classe) |
+| Origem | Altária |
+| Papel na história | Viajante solitário que se juntou ao grupo |
+| Perícias intencionadas | Conhecimento de Alquimia, Culinária, Sobrevivência (Con ≥ 2) — entram na fase 4 |
+| Relíquia | Carrega o mesmo Sino do Vigia Morto |
+| Tom do backstory | Culpa |
+
+**Backstory**
+Alquimista promissor cujo experimento causou a morte de alguém. Tornou-se um andarilho solitário e acredita que o sino pertencia à pessoa que morreu.
+
+**Pendências**
+- Nome do personagem
+- Segunda categoria de classe + especialização (regra de nível 1)
+- Distribuição dos 16 Pontos de Atributo (Humano) + escolha da 3ª perícia (passiva racial)
+- Conexão exata entre os dois personagens em mesa
+
+---
+
+## 10. Pendências do ruleset
+
+Itens em aberto que precisam ser fechados com o mestre conforme a fase 4 se aproxima:
+
+- **Teto por atributo**: limite máximo por atributo na criação e/ou na evolução
+- **Habilidades iniciais por classe**: catálogo (uso em "+N habilidades de classe" da progressão)
+- **Habilidade especial de classe (nível 5)**: catálogo por classe
+- **Detalhes de multiclasse na evolução**: quando o nível dá pontos, eles são compartilhados ou alocados por classe?
+- **Combinações de classe proibidas**: existem ou todas são livres?
+- **Atributo primário**: é só referência ou tem efeito mecânico?
+- **Tabela de XP além do nível 6**: nível 7+ em aberto
+- **Cidades de Leondor e Barioth**: lista para o passo de origem na criação
+- **Anumanos**: jogáveis no MVP ou seed inativo?
+- **Lista das "Skills Próprias" da raça Bruxa**
+
+---
+
+*Compêndio vivo. Atualizar a cada sessão ou decisão de ruleset. Referência cruzada: `.claude` (guia operacional) e `mvp-celestia.md` (especificação completa do ruleset).*

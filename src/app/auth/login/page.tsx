@@ -1,11 +1,13 @@
 import Link from 'next/link';
 import { loginAction } from '@/features/auth/actions/auth.actions';
 
-export default function LoginPage({
+export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ registered?: string }>;
+  searchParams: Promise<{ registered?: string; error?: string }>;
 }) {
+  const { registered, error } = await searchParams;
+
   return (
     <div className="flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-sm space-y-6">
@@ -13,6 +15,15 @@ export default function LoginPage({
           <h1 className="text-2xl font-bold">Celestia RPG</h1>
           <p className="mt-1 text-sm text-gray-500">Entre na sua conta</p>
         </div>
+
+        {registered && (
+          <p className="rounded bg-green-50 p-3 text-sm text-green-700">
+            Conta criada com sucesso! Faça login para continuar.
+          </p>
+        )}
+        {error && (
+          <p className="rounded bg-red-50 p-3 text-sm text-red-700">{error}</p>
+        )}
 
         <form action={loginAction} className="space-y-4">
           <div>

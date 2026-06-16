@@ -6,10 +6,14 @@ CREATE TABLE invites (
   status       invite_status NOT NULL DEFAULT 'pending',
   created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  -- Impede dois convites pendentes para o mesmo usuário na mesma campanha
-  CONSTRAINT invites_unique_pending UNIQUE NULLS NOT DISTINCT (campaign_id, invitee_id, (CASE WHEN status = 'pending' THEN status ELSE NULL END)),
   CONSTRAINT invites_no_self_invite CHECK (inviter_id <> invitee_id)
 );
+
+-- Índice parcial: impede dois convites pendentes para o mesmo usuário na mesma campanha.
+-- Equivalente ao UNIQUE NULLS NOT DISTINCT mas compatível com PostgreSQL < 15.
+CREATE UNIQUE INDEX invites_unique_pending
+  ON invites (campaign_id, invitee_id)
+  WHERE status = 'pending';
 
 CREATE TRIGGER invites_updated_at
   BEFORE UPDATE ON invites

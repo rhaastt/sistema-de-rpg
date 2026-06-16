@@ -1,10 +1,12 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { CelestiaClient } from '@/shared/types/supabase-client';
 import type { Database } from '@/shared/types/database';
 import type { Invite, InviteWithDetails } from '@/domain/invitation/types';
 
-type Client = SupabaseClient<Database>;
+type Client = CelestiaClient;
+type InviteRow = Database['public']['Tables']['invites']['Row'];
+type InviteStatus = Database['public']['Enums']['invite_status'];
 
-function rowToInvite(r: Database['public']['Tables']['invites']['Row']): Invite {
+function rowToInvite(r: InviteRow): Invite {
   return {
     id: r.id,
     campaignId: r.campaign_id,
@@ -16,74 +18,63 @@ function rowToInvite(r: Database['public']['Tables']['invites']['Row']): Invite 
   };
 }
 
+async function enrichInvites(supabase: Client, invites: Invite[]): Promise<InviteWithDetails[]> {
+  if (invites.length === 0) return [];
+
+  const campaignIds = [...new Set(invites.map((i) => i.campaignId))];
+  const profileIds = [...new Set([...invites.map((i) => i.inviterId), ...invites.map((i) => i.inviteeId)])];
+
+  const [{ data: campaignsRaw }, { data: profilesRaw }] = await Promise.all([
+    supabase.from('campaigns').select('id, name').in('id', campaignIds),
+    supabase.from('profiles').select('id, display_name').in('id', profileIds),
+  ]);
+
+  const campaigns = (campaignsRaw as { id: string; name: string }[] | null) ?? [];
+  const profiles = (profilesRaw as { id: string; display_name: string }[] | null) ?? [];
+
+  const cMap = new Map(campaigns.map((c) => [c.id, c.name]));
+  const pMap = new Map(profiles.map((p) => [p.id, p.display_name]));
+
+  return invites.map((inv) => ({
+    ...inv,
+    campaignName: cMap.get(inv.campaignId) ?? '',
+    inviterName: pMap.get(inv.inviterId) ?? '',
+    inviteeName: pMap.get(inv.inviteeId) ?? '',
+  }));
+}
+
 export async function getInviteById(supabase: Client, id: string): Promise<InviteWithDetails | null> {
-  const { data, error } = await supabase
-    .from('invites')
-    .select(`
-      *,
-      campaigns(name),
-      inviter:profiles!invites_inviter_id_fkey(display_name),
-      invitee:profiles!invites_invitee_id_fkey(display_name)
-    `)
-    .eq('id', id)
-    .single();
+  const { data, error } = await supabase.from('invites').select('*').eq('id', id).maybeSingle();
   if (error || !data) return null;
-  return {
-    ...rowToInvite(data),
-    campaignName: data.campaigns?.name ?? '',
-    inviterName: (data.inviter as { display_name: string } | null)?.display_name ?? '',
-    inviteeName: (data.invitee as { display_name: string } | null)?.display_name ?? '',
-  };
+  const [enriched] = await enrichInvites(supabase, [rowToInvite(data as InviteRow)]);
+  return enriched ?? null;
 }
 
 export async function getPendingInvitesForCampaign(supabase: Client, campaignId: string): Promise<InviteWithDetails[]> {
   const { data, error } = await supabase
     .from('invites')
-    .select(`
-      *,
-      campaigns(name),
-      inviter:profiles!invites_inviter_id_fkey(display_name),
-      invitee:profiles!invites_invitee_id_fkey(display_name)
-    `)
+    .select('*')
     .eq('campaign_id', campaignId)
     .eq('status', 'pending');
   if (error || !data) return [];
-  return data.map((row) => ({
-    ...rowToInvite(row),
-    campaignName: row.campaigns?.name ?? '',
-    inviterName: (row.inviter as { display_name: string } | null)?.display_name ?? '',
-    inviteeName: (row.invitee as { display_name: string } | null)?.display_name ?? '',
-  }));
+  return enrichInvites(supabase, (data as InviteRow[]).map(rowToInvite));
 }
 
 export async function getPendingInvitesForUser(supabase: Client, userId: string): Promise<InviteWithDetails[]> {
   const { data, error } = await supabase
     .from('invites')
-    .select(`
-      *,
-      campaigns(name),
-      inviter:profiles!invites_inviter_id_fkey(display_name),
-      invitee:profiles!invites_invitee_id_fkey(display_name)
-    `)
+    .select('*')
     .eq('invitee_id', userId)
     .eq('status', 'pending');
   if (error || !data) return [];
-  return data.map((row) => ({
-    ...rowToInvite(row),
-    campaignName: row.campaigns?.name ?? '',
-    inviterName: (row.inviter as { display_name: string } | null)?.display_name ?? '',
-    inviteeName: (row.invitee as { display_name: string } | null)?.display_name ?? '',
-  }));
+  return enrichInvites(supabase, (data as InviteRow[]).map(rowToInvite));
 }
 
 export async function findProfileByEmail(supabase: Client, email: string): Promise<{ id: string; displayName: string } | null> {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('id, display_name')
-    .eq('email', email)
-    .single();
+  const { data, error } = await supabase.from('profiles').select('id, display_name').eq('email', email).maybeSingle();
   if (error || !data) return null;
-  return { id: data.id, displayName: data.display_name };
+  const p = data as { id: string; display_name: string };
+  return { id: p.id, displayName: p.display_name };
 }
 
 export async function createInvite(
@@ -92,28 +83,19 @@ export async function createInvite(
 ): Promise<Invite> {
   const { data, error } = await supabase
     .from('invites')
-    .insert({
-      campaign_id: payload.campaignId,
-      inviter_id: payload.inviterId,
-      invitee_id: payload.inviteeId,
-    })
+    .insert({ campaign_id: payload.campaignId, inviter_id: payload.inviterId, invitee_id: payload.inviteeId } as any)
     .select()
     .single();
   if (error || !data) throw error ?? new Error('Falha ao criar convite');
-  return rowToInvite(data);
+  return rowToInvite(data as InviteRow);
 }
 
 export async function updateInviteStatus(
   supabase: Client,
   id: string,
-  status: Database['public']['Enums']['invite_status'],
+  status: InviteStatus,
 ): Promise<Invite> {
-  const { data, error } = await supabase
-    .from('invites')
-    .update({ status })
-    .eq('id', id)
-    .select()
-    .single();
+  const { data, error } = await (supabase.from('invites') as any).update({ status }).eq('id', id).select().single();
   if (error || !data) throw error ?? new Error('Falha ao atualizar convite');
-  return rowToInvite(data);
+  return rowToInvite(data as InviteRow);
 }

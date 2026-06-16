@@ -9,6 +9,7 @@ export type InviteStatus = 'pending' | 'accepted' | 'declined' | 'cancelled';
 export type CharacterStatus = 'active' | 'dead';
 export type CharacterSex = 'female' | 'male' | 'other';
 export type ClassSlot = '1' | '2';
+export type SkillOrigin = 'racial' | 'classe' | 'criacao' | 'evolucao' | 'mestre';
 export type HistoryEventType =
   | 'campaign_created'
   | 'campaign_archived'
@@ -46,6 +47,7 @@ export interface Database {
           display_name?: string;
           avatar_url?: string | null;
         };
+        Relationships: [];
       };
       campaigns: {
         Row: {
@@ -53,6 +55,7 @@ export interface Database {
           owner_id: string;
           name: string;
           description: string | null;
+          image_url: string | null;
           status: CampaignStatus;
           archived_at: string | null;
           created_at: string;
@@ -63,14 +66,17 @@ export interface Database {
           owner_id: string;
           name: string;
           description?: string | null;
+          image_url?: string | null;
           status?: CampaignStatus;
         };
         Update: {
           name?: string;
           description?: string | null;
+          image_url?: string | null;
           status?: CampaignStatus;
           archived_at?: string | null;
         };
+        Relationships: [];
       };
       campaign_members: {
         Row: {
@@ -90,6 +96,7 @@ export interface Database {
         Update: {
           removed_at?: string | null;
         };
+        Relationships: [];
       };
       invites: {
         Row: {
@@ -111,6 +118,7 @@ export interface Database {
         Update: {
           status?: InviteStatus;
         };
+        Relationships: [];
       };
       characters: {
         Row: {
@@ -122,6 +130,7 @@ export interface Database {
           sex: CharacterSex;
           age: number | null;
           race_id: string;
+          region: string | null;
           visual_description: string | null;
           background: string | null;
           status: CharacterStatus;
@@ -138,6 +147,7 @@ export interface Database {
           sex: CharacterSex;
           age?: number | null;
           race_id: string;
+          region?: string | null;
           visual_description?: string | null;
           background?: string | null;
           status?: CharacterStatus;
@@ -149,11 +159,13 @@ export interface Database {
           sex?: CharacterSex;
           age?: number | null;
           race_id?: string;
+          region?: string | null;
           visual_description?: string | null;
           background?: string | null;
           status?: CharacterStatus;
           sheet_locked?: boolean;
         };
+        Relationships: [];
       };
       character_classes: {
         Row: {
@@ -174,6 +186,7 @@ export interface Database {
           class_id?: string;
           specialization_id?: string;
         };
+        Relationships: [];
       };
       character_attributes: {
         Row: {
@@ -204,6 +217,7 @@ export interface Database {
           mind?: number;
           charisma?: number;
         };
+        Relationships: [];
       };
       races: {
         Row: {
@@ -211,10 +225,25 @@ export interface Database {
           name: string;
           description: string | null;
           active: boolean;
+          attribute_points: number;
+          attribute_modifiers: Record<string, number>;
           created_at: string;
         };
-        Insert: { name: string; description?: string | null; active?: boolean };
-        Update: { name?: string; description?: string | null; active?: boolean };
+        Insert: {
+          name: string;
+          description?: string | null;
+          active?: boolean;
+          attribute_points?: number;
+          attribute_modifiers?: Record<string, number>;
+        };
+        Update: {
+          name?: string;
+          description?: string | null;
+          active?: boolean;
+          attribute_points?: number;
+          attribute_modifiers?: Record<string, number>;
+        };
+        Relationships: [];
       };
       classes: {
         Row: {
@@ -226,6 +255,7 @@ export interface Database {
         };
         Insert: { name: string; description?: string | null; active?: boolean };
         Update: { name?: string; description?: string | null; active?: boolean };
+        Relationships: [];
       };
       specializations: {
         Row: {
@@ -243,6 +273,50 @@ export interface Database {
           active?: boolean;
         };
         Update: { name?: string; description?: string | null; active?: boolean };
+        Relationships: [];
+      };
+      skills: {
+        Row: {
+          id: string;
+          name: string;
+          attribute: string | null;
+          requirement_value: number | null;
+          description: string | null;
+          active: boolean;
+          created_at: string;
+        };
+        Insert: {
+          name: string;
+          attribute?: string | null;
+          requirement_value?: number | null;
+          description?: string | null;
+          active?: boolean;
+        };
+        Update: {
+          name?: string;
+          attribute?: string | null;
+          requirement_value?: number | null;
+          description?: string | null;
+          active?: boolean;
+        };
+        Relationships: [];
+      };
+      character_skills: {
+        Row: {
+          id: string;
+          character_id: string;
+          skill_id: string;
+          origin: SkillOrigin;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          character_id: string;
+          skill_id: string;
+          origin?: SkillOrigin;
+        };
+        Update: { origin?: SkillOrigin };
+        Relationships: [];
       };
       history_log: {
         Row: {
@@ -260,9 +334,12 @@ export interface Database {
           event_type: HistoryEventType;
           metadata?: Json;
         };
-        Update: never;
+        Update: Record<never, never>;
+        Relationships: [];
       };
     };
+    Views: Record<never, never>;
+    Functions: Record<never, never>;
     Enums: {
       campaign_status: CampaignStatus;
       member_role: MemberRole;
@@ -271,6 +348,7 @@ export interface Database {
       character_sex: CharacterSex;
       class_slot: ClassSlot;
       history_event_type: HistoryEventType;
+      skill_origin: SkillOrigin;
     };
   };
 }

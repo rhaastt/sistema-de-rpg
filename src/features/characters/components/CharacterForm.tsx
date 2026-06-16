@@ -11,7 +11,6 @@ interface Props {
   specializations: Specialization[];
 }
 
-const WITCH_CLASS_NAME = 'Bruxa';
 const WITCH_RACE_NAME = 'Bruxa';
 
 export function CharacterForm({ campaignId, races, classes, specializations }: Props) {
@@ -19,14 +18,10 @@ export function CharacterForm({ campaignId, races, classes, specializations }: P
   const [raceId, setRaceId] = useState('');
   const [slot1ClassId, setSlot1ClassId] = useState('');
   const [slot2ClassId, setSlot2ClassId] = useState('');
-  const [error, setError] = useState('');
 
   const specsByClass = (classId: string) =>
     specializations.filter((s) => s.classId === classId);
 
-  // Filtra a classe Bruxa se as pré-condições não forem atendidas (validação client-side complementar)
-  const selectedRaceName = races.find((r) => r.id === raceId)?.name ?? '';
-  const bruxaClass = classes.find((c) => c.name === WITCH_CLASS_NAME);
   const bruxaRace = races.find((r) => r.name === WITCH_RACE_NAME);
 
   function isWitchAllowed() {
@@ -35,7 +30,7 @@ export function CharacterForm({ campaignId, races, classes, specializations }: P
 
   function filteredClasses(otherSlotClassId: string) {
     return classes.filter((c) => {
-      if (c.name === WITCH_CLASS_NAME && !isWitchAllowed()) return false;
+      if (c.name === 'Bruxa' && !isWitchAllowed()) return false;
       return c.id !== otherSlotClassId;
     });
   }
@@ -43,8 +38,6 @@ export function CharacterForm({ campaignId, races, classes, specializations }: P
   return (
     <form action={createCharacterAndRedirect} className="space-y-6">
       <input type="hidden" name="campaignId" value={campaignId} />
-
-      {error && <p className="rounded bg-red-50 p-3 text-sm text-red-700">{error}</p>}
 
       {/* Informações básicas */}
       <section className="space-y-4">

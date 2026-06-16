@@ -7,6 +7,11 @@ export default defineConfig({
   test: {
     environment: "node",
     globals: true,
+    // Testes de integração batem no Supabase local (rede) e são sequenciais
+    // para evitar corrida no setup/teardown de usuários e dados.
+    testTimeout: 30000,
+    hookTimeout: 30000,
+    fileParallelism: false,
   },
   resolve: {
     alias: {

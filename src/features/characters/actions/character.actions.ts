@@ -14,6 +14,15 @@ import {
 } from '@/features/characters/schemas';
 import * as service from '@/features/characters/services/character.service';
 
+function parseJson<T>(raw: FormDataEntryValue | null): T | undefined {
+  if (typeof raw !== 'string' || raw === '') return undefined;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function createCharacterAction(formData: FormData): Promise<ActionResult<Character>> {
   try {
     const user = await requireAuthUser();
@@ -25,6 +34,7 @@ export async function createCharacterAction(formData: FormData): Promise<ActionR
       sex: formData.get('sex'),
       age: formData.get('age') || undefined,
       raceId: formData.get('raceId'),
+      region: formData.get('region') || undefined,
       visualDescription: formData.get('visualDescription') || undefined,
       background: formData.get('background') || undefined,
       slot1: {
@@ -35,6 +45,8 @@ export async function createCharacterAction(formData: FormData): Promise<ActionR
         classId: formData.get('slot2ClassId'),
         specializationId: formData.get('slot2SpecializationId'),
       },
+      attributes: parseJson(formData.get('attributes')),
+      skillIds: parseJson(formData.get('skillIds')),
     });
     if (!parsed.success) return { success: false, error: parsed.error.errors[0]?.message ?? 'Dados inválidos' };
 
@@ -48,6 +60,7 @@ export async function createCharacterAction(formData: FormData): Promise<ActionR
 
 export async function updateCharacterNarrativeAction(
   characterId: string,
+  _prevState: ActionResult<Character>,
   formData: FormData,
 ): Promise<ActionResult<Character>> {
   try {

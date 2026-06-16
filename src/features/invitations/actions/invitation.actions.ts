@@ -10,7 +10,7 @@ import type { Invite } from '@/domain/invitation/types';
 import { SendInviteSchema } from '@/features/invitations/schemas';
 import * as service from '@/features/invitations/services/invitation.service';
 
-export async function sendInviteAction(formData: FormData): Promise<ActionResult<Invite>> {
+export async function sendInviteAction(_prevState: ActionResult<Invite>, formData: FormData): Promise<ActionResult<Invite>> {
   try {
     const user = await requireAuthUser();
     const supabase = await createClient();
@@ -36,29 +36,17 @@ export async function acceptInviteAction(inviteId: string): Promise<void> {
   redirect(`/campaigns/${invite.campaignId}`);
 }
 
-export async function declineInviteAction(inviteId: string): Promise<ActionResult> {
-  try {
-    const user = await requireAuthUser();
-    const supabase = await createClient();
-    await service.declineInvite(supabase, user.id, inviteId);
-    revalidatePath('/campaigns');
-    return { success: true, data: undefined };
-  } catch (e) {
-    return { success: false, error: domainErrorMessage(e) };
-  }
+export async function declineInviteAction(inviteId: string): Promise<void> {
+  const user = await requireAuthUser();
+  const supabase = await createClient();
+  await service.declineInvite(supabase, user.id, inviteId);
+  redirect('/campaigns');
 }
 
-export async function cancelInviteAction(
-  campaignId: string,
-  inviteId: string,
-): Promise<ActionResult> {
-  try {
-    const user = await requireAuthUser();
-    const supabase = await createClient();
-    await service.cancelInvite(supabase, user.id, inviteId);
-    revalidatePath(`/campaigns/${campaignId}`);
-    return { success: true, data: undefined };
-  } catch (e) {
-    return { success: false, error: domainErrorMessage(e) };
-  }
+export async function cancelInviteAction(campaignId: string, inviteId: string): Promise<void> {
+  const user = await requireAuthUser();
+  const supabase = await createClient();
+  await service.cancelInvite(supabase, user.id, inviteId);
+  revalidatePath(`/campaigns/${campaignId}`);
+  redirect(`/campaigns/${campaignId}`);
 }
