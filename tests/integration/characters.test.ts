@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { hasSupabaseEnv, createTestUser, cleanupUsers, loadRuleset, type TestUser, type Ruleset } from '../helpers/db';
+import { hasSupabaseEnv, createTestUser, cleanupUsers, loadRuleset, adminClient, type TestUser, type Ruleset } from '../helpers/db';
 import * as campaignService from '@/features/campaigns/services/campaign.service';
 import * as inviteService from '@/features/invitations/services/invitation.service';
 import * as characterService from '@/features/characters/services/character.service';
@@ -54,6 +54,40 @@ describe.skipIf(!hasSupabaseEnv)('Personagens (regras + permissões)', () => {
     // os seis atributos existem (criados pelo trigger)
     expect(sheet.attributes).toMatchObject({
       strength: 0, dexterity: 0, constitution: 0, intelligence: 0, mind: 0, charisma: 0,
+    });
+  });
+
+  it('persiste região, atributos finais e perícias na criação (Fase 4)', async () => {
+    const p = await createTestUser('JogadorFase4');
+    userIds.push(p.id);
+    await joinAsPlayer(p, campaignId);
+
+    const { data: skill } = await adminClient()
+      .from('skills')
+      .select('id')
+      .eq('name', 'Culinária')
+      .maybeSingle();
+    const skillId = (skill as { id: string }).id;
+
+    const character = await characterService.createCharacter(p.client, p.id, baseInput({
+      name: 'Caçador',
+      region: 'Altária',
+      attributes: { strength: 5, dexterity: 4, constitution: 3, intelligence: 2, mind: 1, charisma: 0 },
+      skillIds: [skillId],
+    }));
+    expect(character.region).toBe('Altária');
+
+    const sheet = await characterService.getCharacterSheet(p.client, p.id, character.id);
+    expect(sheet.attributes).toMatchObject({ strength: 5, dexterity: 4, constitution: 3 });
+
+    const { data: charSkills } = await adminClient()
+      .from('character_skills')
+      .select('skill_id, origin')
+      .eq('character_id', character.id);
+    expect(charSkills).toHaveLength(1);
+    expect((charSkills as { skill_id: string; origin: string }[])[0]).toMatchObject({
+      skill_id: skillId,
+      origin: 'criacao',
     });
   });
 

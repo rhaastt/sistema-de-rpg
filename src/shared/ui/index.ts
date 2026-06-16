@@ -5,6 +5,7 @@ export { Input, SearchInput } from './Input';
 export { ImageUploadField } from './ImageUploadField';
 export { Frame } from './Frame';
 export { Card, CampaignCard, CharacterCard, Badge } from './Card';
+export { SelectableCard } from './SelectableCard';
 export { Panel, DetailRow } from './Panel';
 export { SidebarItem } from './SidebarItem';
 export { Tabs, type TabItem } from './Tabs';

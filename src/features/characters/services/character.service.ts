@@ -62,6 +62,7 @@ export async function createCharacter(
     sex: input.sex,
     age: input.age ?? null,
     race_id: input.raceId,
+    region: input.region ?? null,
     visual_description: input.visualDescription ?? null,
     background: input.background ?? null,
   });
@@ -70,6 +71,16 @@ export async function createCharacter(
     { characterId: character.id, slot: '1', classId: input.slot1.classId, specializationId: input.slot1.specializationId },
     { characterId: character.id, slot: '2', classId: input.slot2.classId, specializationId: input.slot2.specializationId },
   ]);
+
+  // Atributos finais (distribuído + bônus racial) calculados na criação.
+  if (input.attributes) {
+    await repo.updateCharacterAttributes(supabase, character.id, input.attributes);
+  }
+
+  // Perícias escolhidas na criação (origem 'criacao').
+  if (input.skillIds && input.skillIds.length > 0) {
+    await repo.insertCharacterSkills(supabase, character.id, input.skillIds, 'criacao');
+  }
 
   await log(supabase, {
     campaign_id: input.campaignId,

@@ -2,7 +2,12 @@ import { notFound } from 'next/navigation';
 import { requireAuthUser } from '@/shared/auth/session';
 import { createClient } from '@/infrastructure/supabase/server';
 import { getMembership } from '@/features/members/repositories/member.repository';
-import { getRaces, getClasses, getAllSpecializations } from '@/infrastructure/repositories/ruleset.repository';
+import {
+  getRaces,
+  getClasses,
+  getAllSpecializations,
+  getSkills,
+} from '@/infrastructure/repositories/ruleset.repository';
 import { CharacterCreationWizard } from '@/features/characters/components/CharacterCreationWizard';
 
 export default async function NewCharacterPage({ params }: { params: Promise<{ id: string }> }) {
@@ -14,10 +19,11 @@ export default async function NewCharacterPage({ params }: { params: Promise<{ i
   const membership = await getMembership(supabase, campaignId, user.id);
   if (!membership || membership.role === 'master') notFound();
 
-  const [races, classes, specializations] = await Promise.all([
+  const [races, classes, specializations, skills] = await Promise.all([
     getRaces(supabase),
     getClasses(supabase),
     getAllSpecializations(supabase),
+    getSkills(supabase),
   ]);
 
   return (
@@ -27,6 +33,7 @@ export default async function NewCharacterPage({ params }: { params: Promise<{ i
         races={races}
         classes={classes}
         specializations={specializations}
+        skills={skills}
       />
     </div>
   );

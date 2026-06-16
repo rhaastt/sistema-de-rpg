@@ -17,6 +17,7 @@ function rowToCharacter(r: CharRow): Character {
     sex: r.sex,
     age: r.age,
     raceId: r.race_id,
+    region: r.region,
     visualDescription: r.visual_description,
     background: r.background,
     status: r.status,
@@ -146,6 +147,19 @@ export async function upsertCharacterClasses(
     classId: cc.class_id,
     specializationId: cc.specialization_id,
   }));
+}
+
+export async function insertCharacterSkills(
+  supabase: Client,
+  characterId: string,
+  skillIds: string[],
+  origin: Database['public']['Enums']['skill_origin'] = 'criacao',
+): Promise<void> {
+  if (skillIds.length === 0) return;
+  const rows = skillIds.map((skillId) => ({ character_id: characterId, skill_id: skillId, origin }));
+  // Sem .select(): evita o gotcha do RETURNING sob RLS.
+  const { error } = await supabase.from('character_skills').insert(rows as any);
+  if (error) throw error;
 }
 
 export async function updateCharacterAttributes(

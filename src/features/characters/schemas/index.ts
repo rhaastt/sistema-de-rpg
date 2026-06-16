@@ -5,16 +5,28 @@ const ClassSlotSchema = z.object({
   specializationId: z.string().uuid('ID de especialização inválido'),
 });
 
+const AttributesSchema = z.object({
+  strength: z.coerce.number().int(),
+  dexterity: z.coerce.number().int(),
+  constitution: z.coerce.number().int(),
+  intelligence: z.coerce.number().int(),
+  mind: z.coerce.number().int(),
+  charisma: z.coerce.number().int(),
+});
+
 export const CreateCharacterSchema = z.object({
   campaignId: z.string().uuid(),
   name: z.string().min(1, 'Nome obrigatório').max(120, 'Máximo 120 caracteres'),
   sex: z.enum(['female', 'male', 'other'], { message: 'Sexo obrigatório' }),
   age: z.coerce.number().int().positive('Idade deve ser positiva').optional(),
   raceId: z.string().uuid('Raça obrigatória'),
+  region: z.string().max(60).optional(),
   visualDescription: z.string().max(1000).optional(),
   background: z.string().max(3000).optional(),
   slot1: ClassSlotSchema,
   slot2: ClassSlotSchema,
+  attributes: AttributesSchema.optional(),
+  skillIds: z.array(z.string().uuid()).max(10).optional(),
 });
 
 export const UpdateCharacterNarrativeSchema = z.object({

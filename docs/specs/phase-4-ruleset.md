@@ -122,9 +122,10 @@ Ordem final do fluxo: Identidade → Origem → Raça → Classes → Atributos 
 
 ## 5. Ordem sugerida de implementação
 
-1. **Reseed de raças** com `attribute_points` + modificadores (Compêndio §4) — desbloqueia mostrar pontos/bônus já na etapa Raça.
-2. **Atributos**: distribuição do pool + fórmula + vida/carga derivadas (depende do **teto por atributo**).
-3. **Perícias**: tabela + seed (§6) + seleção 2/3 + raciais.
+1. ✅ **Reseed de raças** com `attribute_points` + modificadores (`0018` + `01_races.sql`, catálogo completo, Anumanos ativos); etapa Raça mostra pontos/bônus.
+1b. ✅ **Região** de origem (`0019`) — etapa 1 do wizard, 4 reinos do §1 (cidades em aberto).
+2. 🟡 **Atributos na criação** — etapa do wizard: distribuição do pool + fórmula `distribuído + bônus_racial`. **Sem teto por atributo** (pendência §1.1 — livre dentro do pool por ora). Vida/carga ainda não implementadas.
+3. 🟡 **Perícias na criação** — `skills`/`character_skills` (`0020`) + seed `03_skills.sql` (§6); seleção 2/3 com requisito vs. atributo final. **Pendente:** auto-conceder perícias raciais (Brutamontes etc.) e "Skills Próprias" da Bruxa (§1.1).
 4. **XP/níveis**: `level_progression` + cálculo de nível.
 5. **Evolução** (pontos, +perícia, +Mente, habilidades de classe) — depende das decisões §1.2.
 

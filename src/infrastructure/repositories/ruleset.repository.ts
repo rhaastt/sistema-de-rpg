@@ -1,29 +1,35 @@
 import type { CelestiaClient } from '@/shared/types/supabase-client';
 import type { Database } from '@/shared/types/database';
-import type { Race, RulesetClass, Specialization } from '@/domain/ruleset/types';
+import type { Race, RulesetClass, Specialization, AttributeModifiers, Skill, AttributeKey } from '@/domain/ruleset/types';
 
 type Client = CelestiaClient;
 type RaceRow = Database['public']['Tables']['races']['Row'];
 type ClassRow = Database['public']['Tables']['classes']['Row'];
 type SpecRow = Database['public']['Tables']['specializations']['Row'];
+type SkillRow = Database['public']['Tables']['skills']['Row'];
 
-export async function getRaces(supabase: Client): Promise<Race[]> {
-  const { data, error } = await supabase.from('races').select('*').eq('active', true).order('name');
-  if (error) throw error;
-  return ((data as RaceRow[] | null) ?? []).map((r) => ({
+function rowToRace(r: RaceRow): Race {
+  return {
     id: r.id,
     name: r.name,
     description: r.description,
     active: r.active,
+    attributePoints: r.attribute_points,
+    attributeModifiers: (r.attribute_modifiers ?? {}) as AttributeModifiers,
     createdAt: r.created_at,
-  }));
+  };
+}
+
+export async function getRaces(supabase: Client): Promise<Race[]> {
+  const { data, error } = await supabase.from('races').select('*').eq('active', true).order('name');
+  if (error) throw error;
+  return ((data as RaceRow[] | null) ?? []).map(rowToRace);
 }
 
 export async function getRaceByName(supabase: Client, name: string): Promise<Race | null> {
   const { data, error } = await supabase.from('races').select('*').eq('name', name).maybeSingle();
   if (error || !data) return null;
-  const r = data as RaceRow;
-  return { id: r.id, name: r.name, description: r.description, active: r.active, createdAt: r.created_at };
+  return rowToRace(data as RaceRow);
 }
 
 export async function getClasses(supabase: Client): Promise<RulesetClass[]> {
@@ -43,6 +49,19 @@ export async function getClassById(supabase: Client, id: string): Promise<Rulese
   if (error || !data) return null;
   const c = data as ClassRow;
   return { id: c.id, name: c.name, description: c.description, active: c.active, createdAt: c.created_at };
+}
+
+export async function getSkills(supabase: Client): Promise<Skill[]> {
+  const { data, error } = await supabase.from('skills').select('*').eq('active', true).order('name');
+  if (error) throw error;
+  return ((data as SkillRow[] | null) ?? []).map((s) => ({
+    id: s.id,
+    name: s.name,
+    attribute: (s.attribute ?? null) as AttributeKey | null,
+    requirementValue: s.requirement_value,
+    description: s.description,
+    active: s.active,
+  }));
 }
 
 export async function getAllSpecializations(supabase: Client): Promise<Specialization[]> {
