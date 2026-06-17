@@ -1,17 +1,20 @@
 'use client';
 
 import { useTransition } from 'react';
+import { Button, Input } from '@/shared/ui';
 import { updateCharacterAttributesAction } from '@/features/characters/actions/character.actions';
 import type { CharacterAttributes } from '@/domain/character/types';
 
-const ATTRIBUTE_LABELS: Record<keyof Omit<CharacterAttributes, 'id' | 'characterId' | 'updatedAt'>, string> = {
+const ATTRIBUTE_LABELS = {
   strength: 'Força',
   dexterity: 'Destreza',
   constitution: 'Constituição',
   intelligence: 'Inteligência',
   mind: 'Mente',
   charisma: 'Carisma',
-};
+} as const;
+
+const ATTRS = ['strength', 'dexterity', 'constitution', 'intelligence', 'mind', 'charisma'] as const;
 
 interface Props {
   characterId: string;
@@ -32,31 +35,25 @@ export function AttributesForm({ characterId, campaignId, attributes, canEdit }:
     });
   }
 
-  const attrs = ['strength', 'dexterity', 'constitution', 'intelligence', 'mind', 'charisma'] as const;
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-        {attrs.map((attr) => (
-          <div key={attr}>
-            <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide">
-              {ATTRIBUTE_LABELS[attr]}
-            </label>
-            <input
-              name={attr}
-              type="number"
-              defaultValue={attributes[attr]}
-              disabled={!canEdit}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none disabled:bg-gray-50 disabled:text-gray-500"
-            />
-          </div>
+        {ATTRS.map((attr) => (
+          <Input
+            key={attr}
+            id={attr}
+            name={attr}
+            type="number"
+            label={ATTRIBUTE_LABELS[attr]}
+            defaultValue={attributes[attr]}
+            disabled={!canEdit}
+          />
         ))}
       </div>
       {canEdit && (
-        <button type="submit" disabled={isPending}
-          className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60">
+        <Button type="submit" disabled={isPending} className="self-start">
           {isPending ? 'Salvando...' : 'Salvar atributos'}
-        </button>
+        </Button>
       )}
     </form>
   );
