@@ -2,7 +2,12 @@
 
 import { useTransition } from 'react';
 import Link from 'next/link';
-import { lockCharacterSheetAction, unlockCharacterSheetAction, changeCharacterStatusAction } from '@/features/characters/actions/character.actions';
+import { Avatar, Badge, Button } from '@/shared/ui';
+import {
+  lockCharacterSheetAction,
+  unlockCharacterSheetAction,
+  changeCharacterStatusAction,
+} from '@/features/characters/actions/character.actions';
 import { AttributesForm } from './AttributesForm';
 import type { CharacterFullView } from '@/domain/character/types';
 
@@ -36,35 +41,25 @@ export function CharacterSheet({ character, isMaster, isOwner }: Props) {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="flex flex-col gap-8">
       {/* Cabeçalho */}
       <div className="flex items-start gap-4">
-        {character.imageUrl && (
-          <img src={character.imageUrl} alt={character.name}
-            className="h-24 w-24 rounded-full object-cover border border-gray-200" />
-        )}
+        <Avatar src={character.imageUrl} name={character.name} size="lg" />
         <div className="flex-1">
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-gray-900">{character.name}</h1>
-            <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-              character.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-            }`}>
-              {STATUS_LABEL[character.status]}
-            </span>
-            {character.sheetLocked && (
-              <span className="rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-800">
-                Ficha bloqueada
-              </span>
-            )}
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="font-serif text-page font-bold text-content">{character.name}</h1>
+            <Badge>{STATUS_LABEL[character.status]}</Badge>
+            {character.sheetLocked && <Badge>Ficha bloqueada</Badge>}
           </div>
-          <p className="mt-1 text-sm text-gray-500">
-            {character.raceName} · {SEX_LABEL[character.sex]}{character.age ? ` · ${character.age} anos` : ''}
+          <p className="mt-1 text-small text-content-secondary">
+            {character.raceName} · {SEX_LABEL[character.sex]}
+            {character.age ? ` · ${character.age} anos` : ''}
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
             {character.classes.map((cc) => (
-              <span key={cc.slot} className="rounded bg-indigo-50 px-2 py-0.5 text-xs text-indigo-700">
+              <Badge key={cc.slot}>
                 {cc.className} — {cc.specializationName}
-              </span>
+              </Badge>
             ))}
           </div>
         </div>
@@ -72,59 +67,58 @@ export function CharacterSheet({ character, isMaster, isOwner }: Props) {
         {/* Controles do mestre */}
         {isMaster && (
           <div className="flex gap-2">
-            <button onClick={toggleLock} disabled={isPending}
-              className="rounded-md border border-gray-300 px-3 py-1.5 text-xs hover:bg-gray-50 disabled:opacity-60">
+            <Button variant="secondary" size="small" onClick={toggleLock} disabled={isPending}>
               {character.sheetLocked ? 'Desbloquear ficha' : 'Bloquear ficha'}
-            </button>
-            <button onClick={toggleStatus} disabled={isPending}
-              className="rounded-md border border-gray-300 px-3 py-1.5 text-xs hover:bg-gray-50 disabled:opacity-60">
+            </Button>
+            <Button variant="secondary" size="small" onClick={toggleStatus} disabled={isPending}>
               {character.status === 'active' ? 'Marcar como morto' : 'Marcar como ativo'}
-            </button>
+            </Button>
           </div>
         )}
       </div>
 
       {/* Descrição visual (pública) */}
       {character.visualDescription && (
-        <section>
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">Descrição visual</h2>
-          <p className="mt-2 text-sm text-gray-700 whitespace-pre-wrap">{character.visualDescription}</p>
-        </section>
+        <Section title="Descrição visual">
+          <p className="whitespace-pre-wrap text-body text-content">{character.visualDescription}</p>
+        </Section>
       )}
 
       {/* Atributos (privado) */}
       {(isMaster || isOwner) && (
-        <section>
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">Atributos</h2>
-          <div className="mt-2">
-            <AttributesForm
-              characterId={character.id}
-              campaignId={character.campaignId}
-              attributes={character.attributes}
-              canEdit={canEdit}
-            />
-          </div>
-        </section>
+        <Section title="Atributos">
+          <AttributesForm
+            characterId={character.id}
+            campaignId={character.campaignId}
+            attributes={character.attributes}
+            canEdit={canEdit}
+          />
+        </Section>
       )}
 
       {/* Background (privado) */}
       {(isMaster || isOwner) && character.background && (
-        <section>
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">Background</h2>
-          <p className="mt-2 text-sm text-gray-700 whitespace-pre-wrap">{character.background}</p>
-        </section>
+        <Section title="Background">
+          <p className="whitespace-pre-wrap text-body text-content">{character.background}</p>
+        </Section>
       )}
 
       {canEdit && (
         <div>
-          <Link
-            href={`/campaigns/${character.campaignId}/characters/${character.id}/edit`}
-            className="inline-block rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
-          >
-            Editar narrativa
+          <Link href={`/campaigns/${character.campaignId}/characters/${character.id}/edit`}>
+            <Button>Editar narrativa</Button>
           </Link>
         </div>
       )}
     </div>
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="flex flex-col gap-2">
+      <h2 className="text-label font-semibold uppercase tracking-wide text-content-secondary">{title}</h2>
+      {children}
+    </section>
   );
 }

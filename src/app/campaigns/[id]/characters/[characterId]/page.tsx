@@ -29,19 +29,24 @@ export default async function CharacterPage({
     // Participante vê apenas dados públicos — renderiza visão simplificada
     return (
       <div className="space-y-6">
-        <Link href={`/campaigns/${campaignId}`} className="text-sm text-indigo-600 hover:underline">
+        <Link
+          href={`/campaigns/${campaignId}`}
+          className="text-small text-content-secondary hover:text-content"
+        >
           ← Voltar para a campanha
         </Link>
         <div>
-          <h1 className="text-2xl font-bold">{character.name}</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="font-serif text-page font-bold text-content">{character.name}</h1>
+          <p className="mt-1 text-small text-content-secondary">
             {character.raceName} · {character.classes.map((c) => c.className).join(' / ')}
           </p>
         </div>
         {character.visualDescription && (
-          <section>
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">Descrição visual</h2>
-            <p className="mt-2 text-sm text-gray-700 whitespace-pre-wrap">{character.visualDescription}</p>
+          <section className="flex flex-col gap-2">
+            <h2 className="text-label font-semibold uppercase tracking-wide text-content-secondary">
+              Descrição visual
+            </h2>
+            <p className="whitespace-pre-wrap text-body text-content">{character.visualDescription}</p>
           </section>
         )}
       </div>
@@ -50,7 +55,10 @@ export default async function CharacterPage({
 
   return (
     <div className="space-y-6">
-      <Link href={`/campaigns/${campaignId}`} className="text-sm text-indigo-600 hover:underline">
+      <Link
+        href={`/campaigns/${campaignId}`}
+        className="text-small text-content-secondary hover:text-content"
+      >
         ← Voltar para a campanha
       </Link>
       <CharacterSheet character={character} isMaster={isMaster} isOwner={isOwner} />
