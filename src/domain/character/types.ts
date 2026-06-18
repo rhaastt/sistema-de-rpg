@@ -12,6 +12,7 @@ export interface Character {
   age: number | null;
   raceId: string;
   region: string | null;
+  currentHp: number | null;
   visualDescription: string | null;
   background: string | null;
   status: CharacterStatus;

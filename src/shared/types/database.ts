@@ -131,6 +131,7 @@ export interface Database {
           age: number | null;
           race_id: string;
           region: string | null;
+          current_hp: number | null;
           visual_description: string | null;
           background: string | null;
           status: CharacterStatus;
@@ -148,6 +149,7 @@ export interface Database {
           age?: number | null;
           race_id: string;
           region?: string | null;
+          current_hp?: number | null;
           visual_description?: string | null;
           background?: string | null;
           status?: CharacterStatus;
@@ -160,6 +162,7 @@ export interface Database {
           age?: number | null;
           race_id?: string;
           region?: string | null;
+          current_hp?: number | null;
           visual_description?: string | null;
           background?: string | null;
           status?: CharacterStatus;

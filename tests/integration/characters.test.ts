@@ -91,6 +91,33 @@ describe.skipIf(!hasSupabaseEnv)('Personagens (regras + permissões)', () => {
     });
   });
 
+  it('vida: inicia na máxima, mestre ajusta com teto, jogador não controla (Fase 4)', async () => {
+    const p = await createTestUser('JogadorHP');
+    userIds.push(p.id);
+    await joinAsPlayer(p, campaignId);
+
+    // Constituição final 3 → vida máxima = 100 + 3×10 = 130
+    const c = await characterService.createCharacter(p.client, p.id, baseInput({
+      name: 'Tank',
+      attributes: { strength: 2, dexterity: 0, constitution: 3, intelligence: 0, mind: 0, charisma: 0 },
+    }));
+
+    const s1 = await characterService.getCharacterSheet(master.client, master.id, c.id);
+    expect(s1.currentHp).toBe(130);
+
+    await characterService.setCharacterHp(master.client, master.id, c.id, 50);
+    const s2 = await characterService.getCharacterSheet(master.client, master.id, c.id);
+    expect(s2.currentHp).toBe(50);
+
+    // acima do teto é limitado à máxima
+    await characterService.setCharacterHp(master.client, master.id, c.id, 999);
+    const s3 = await characterService.getCharacterSheet(master.client, master.id, c.id);
+    expect(s3.currentHp).toBe(130);
+
+    // o jogador não controla a vida atual
+    await expect(characterService.setCharacterHp(p.client, p.id, c.id, 10)).rejects.toThrow();
+  });
+
   it('impede mais de um personagem do mesmo jogador na campanha', async () => {
     await expect(
       characterService.createCharacter(player.client, player.id, baseInput({ name: 'Segundo' })),

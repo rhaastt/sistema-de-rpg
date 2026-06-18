@@ -18,6 +18,7 @@ function rowToCharacter(r: CharRow): Character {
     age: r.age,
     raceId: r.race_id,
     region: r.region,
+    currentHp: r.current_hp,
     visualDescription: r.visual_description,
     background: r.background,
     status: r.status,
@@ -147,6 +148,13 @@ export async function upsertCharacterClasses(
     classId: cc.class_id,
     specializationId: cc.specialization_id,
   }));
+}
+
+export async function setCurrentHp(supabase: Client, characterId: string, value: number): Promise<void> {
+  const { error } = await (supabase.from('characters') as any)
+    .update({ current_hp: value })
+    .eq('id', characterId);
+  if (error) throw error;
 }
 
 export async function insertCharacterSkills(
