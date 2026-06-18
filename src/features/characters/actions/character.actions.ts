@@ -141,6 +141,22 @@ export async function unlockCharacterSheetAction(
   }
 }
 
+export async function setCharacterHpAction(
+  characterId: string,
+  campaignId: string,
+  value: number,
+): Promise<ActionResult> {
+  try {
+    const user = await requireAuthUser();
+    const supabase = await createClient();
+    await service.setCharacterHp(supabase, user.id, characterId, value);
+    revalidatePath(`/campaigns/${campaignId}/characters/${characterId}`);
+    return { success: true, data: undefined };
+  } catch (e) {
+    return { success: false, error: domainErrorMessage(e) };
+  }
+}
+
 export async function changeCharacterStatusAction(
   characterId: string,
   campaignId: string,

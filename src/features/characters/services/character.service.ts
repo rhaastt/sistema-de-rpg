@@ -6,6 +6,7 @@ import * as repo from '@/features/characters/repositories/character.repository';
 import * as memberRepo from '@/features/members/repositories/member.repository';
 import { getRaceByName, getClassById } from '@/infrastructure/repositories/ruleset.repository';
 import { insertHistoryEvent } from '@/infrastructure/repositories/history-log.repository';
+import { maxHp, clampHp } from '@/domain/character/vitals';
 import type { CreateCharacterInput, UpdateCharacterAttributesInput, UpdateCharacterNarrativeInput } from '@/features/characters/schemas';
 
 type Client = CelestiaClient;
@@ -73,8 +74,10 @@ export async function createCharacter(
   ]);
 
   // Atributos finais (distribuído + bônus racial) calculados na criação.
+  // A vida atual inicia na máxima (vida_máxima = 100 + Constituição × 10).
   if (input.attributes) {
     await repo.updateCharacterAttributes(supabase, character.id, input.attributes);
+    await repo.setCurrentHp(supabase, character.id, maxHp(input.attributes.constitution));
   }
 
   // Perícias escolhidas na criação (origem 'criacao').
@@ -168,6 +171,32 @@ export async function updateCharacterAttributes(
     mind: input.mind,
     charisma: input.charisma,
   });
+
+  // Mudança na Constituição recalcula a máxima; limita a atual à nova máxima.
+  if (character.currentHp !== null) {
+    await repo.setCurrentHp(supabase, characterId, clampHp(character.currentHp, input.constitution));
+  }
+}
+
+/**
+ * Define a vida atual do personagem. Controlada apenas pelo mestre (Compêndio §2),
+ * limitada a [0, máxima] conforme a Constituição final.
+ */
+export async function setCharacterHp(
+  supabase: Client,
+  masterId: string,
+  characterId: string,
+  value: number,
+): Promise<void> {
+  const character = await repo.getCharacterFullView(supabase, characterId);
+  if (!character) throw new NotFoundError('Personagem');
+
+  const membership = await memberRepo.getMembership(supabase, character.campaignId, masterId);
+  if (!membership || membership.role !== 'master') {
+    throw new UnauthorizedError('Apenas o mestre controla a vida atual');
+  }
+
+  await repo.setCurrentHp(supabase, characterId, clampHp(value, character.attributes.constitution));
 }
 
 export async function lockCharacterSheet(

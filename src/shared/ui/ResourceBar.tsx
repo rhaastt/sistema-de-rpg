@@ -6,8 +6,10 @@ interface ResourceBarProps {
   variant: Resource;
   value: number;
   max: number;
-  /** Mostra o rótulo e o valor atual/máximo acima da barra. */
+  /** Mostra o rótulo e o valor acima da barra. */
   showLabel?: boolean;
+  /** 'absolute' = "atual/máx"; 'percent' = só o percentual. */
+  display?: 'absolute' | 'percent';
 }
 
 // Cores dedicadas (tokens --color-life / --color-mana), tons terrosos
@@ -26,7 +28,7 @@ const labels: Record<Resource, string> = {
  * Resource Bar / Life + Mana. A trilha tem peso visual de destaque
  * (border/width-emphasis = 5px) e cantos totalmente arredondados.
  */
-export function ResourceBar({ variant, value, max, showLabel = true }: ResourceBarProps) {
+export function ResourceBar({ variant, value, max, showLabel = true, display = 'absolute' }: ResourceBarProps) {
   const safeMax = Math.max(max, 1);
   const pct = Math.max(0, Math.min(100, Math.round((value / safeMax) * 100)));
 
@@ -38,7 +40,7 @@ export function ResourceBar({ variant, value, max, showLabel = true }: ResourceB
             {labels[variant]}
           </span>
           <span className="text-small tabular-nums text-content">
-            {value}/{max}
+            {display === 'percent' ? `${pct}%` : `${value}/${max}`}
           </span>
         </div>
       )}

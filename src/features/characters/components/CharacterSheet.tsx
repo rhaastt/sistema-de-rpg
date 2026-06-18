@@ -1,13 +1,15 @@
 'use client';
 
-import { useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import Link from 'next/link';
-import { Avatar, Badge, Button } from '@/shared/ui';
 import {
   lockCharacterSheetAction,
   unlockCharacterSheetAction,
   changeCharacterStatusAction,
+  setCharacterHpAction,
 } from '@/features/characters/actions/character.actions';
+import { ResourceBar } from '@/shared/ui';
+import { maxHp, carryCapacity } from '@/domain/character/vitals';
 import { AttributesForm } from './AttributesForm';
 import type { CharacterFullView } from '@/domain/character/types';
 
@@ -23,6 +25,19 @@ interface Props {
 export function CharacterSheet({ character, isMaster, isOwner }: Props) {
   const [isPending, startTransition] = useTransition();
   const canEdit = isMaster || (isOwner && !character.sheetLocked);
+
+  // Vitais derivados (Compêndio §2). A vida atual inicia na máxima.
+  const maxHpValue = maxHp(character.attributes.constitution);
+  const currentHpValue = character.currentHp ?? maxHpValue;
+  const carry = carryCapacity(character.attributes.strength);
+  const [hpInput, setHpInput] = useState(String(currentHpValue));
+
+  function saveHp() {
+    startTransition(async () => {
+      const result = await setCharacterHpAction(character.id, character.campaignId, Number(hpInput));
+      if (!result.success) alert(result.error);
+    });
+  }
 
   function toggleLock() {
     startTransition(async () => {
@@ -82,6 +97,40 @@ export function CharacterSheet({ character, isMaster, isOwner }: Props) {
         <Section title="Descrição visual">
           <p className="whitespace-pre-wrap text-body text-content">{character.visualDescription}</p>
         </Section>
+      )}
+
+      {/* Vitais (privado: dono vê %, mestre vê absoluto e controla) */}
+      {(isMaster || isOwner) && (
+        <section>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">Vitais</h2>
+          <div className="mt-2 max-w-sm space-y-3 rounded-card border-2 border-stroke-subtle bg-surface p-4">
+            {isMaster ? (
+              <>
+                <ResourceBar variant="life" value={currentHpValue} max={maxHpValue} />
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={0}
+                    max={maxHpValue}
+                    value={hpInput}
+                    onChange={(e) => setHpInput(e.target.value)}
+                    className="h-9 w-24 rounded-control border-2 border-stroke-subtle bg-input px-2 text-body text-content focus:border-stroke-active focus:outline-none"
+                  />
+                  <button
+                    onClick={saveHp}
+                    disabled={isPending}
+                    className="rounded-control border-2 border-content bg-content px-3 py-1.5 text-small font-medium text-content-inverse hover:bg-content/90 disabled:opacity-60"
+                  >
+                    Salvar vida
+                  </button>
+                </div>
+              </>
+            ) : (
+              <ResourceBar variant="life" value={currentHpValue} max={maxHpValue} display="percent" />
+            )}
+            <p className="text-small text-content-secondary">Capacidade de carga: {carry} kg</p>
+          </div>
+        </section>
       )}
 
       {/* Atributos (privado) */}
