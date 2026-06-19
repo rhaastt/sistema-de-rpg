@@ -85,8 +85,8 @@ export function CharacterCreationWizard({ campaignId, races, classes, specializa
 
   const bruxaClass = useMemo(() => classes.find((c) => c.name === 'Bruxa'), [classes]);
   const selectedRace = races.find((r) => r.id === raceId);
-  const bruxaRace = useMemo(() => races.find((r) => r.name === 'Bruxa'), [races]);
-  const bruxaAllowed = sex === 'female' && !!bruxaRace && raceId === bruxaRace.id;
+  // A classe Bruxa só depende do sexo feminino (CLAUDE.md §5.5.2); não há raça Bruxa.
+  const bruxaAllowed = sex === 'female';
 
   const specsByClass = useMemo(() => {
     const m = new Map<string, Specialization[]>();
@@ -126,7 +126,7 @@ export function CharacterCreationWizard({ campaignId, races, classes, specializa
       if (slot2.classId && !slot2.specializationId) return 'Escolha a especialização do slot 2 ou deixe-o vazio.';
       const usesBruxa = bruxaClass && (slot1.classId === bruxaClass.id || slot2.classId === bruxaClass.id);
       if (usesBruxa && !bruxaAllowed) {
-        return 'A classe Bruxa só pode ser escolhida por personagem da raça Bruxa e do sexo feminino.';
+        return 'A classe Bruxa só pode ser escolhida por personagem do sexo feminino.';
       }
     }
     if (s === 4 && remaining !== 0) {
@@ -293,7 +293,7 @@ export function CharacterCreationWizard({ campaignId, races, classes, specializa
                           return (
                             <option key={c.id} value={c.id} disabled={Boolean(isBruxa) && !bruxaAllowed}>
                               {c.name}
-                              {isBruxa && !bruxaAllowed ? ' (requer raça Bruxa e sexo feminino)' : ''}
+                              {isBruxa && !bruxaAllowed ? ' (requer sexo feminino)' : ''}
                             </option>
                           );
                         })}
@@ -321,7 +321,7 @@ export function CharacterCreationWizard({ campaignId, races, classes, specializa
             })}
           </div>
           <p className="text-small text-content-secondary">
-            A classe Bruxa só pode ser escolhida por personagem da raça Bruxa e do sexo feminino.
+            A classe Bruxa só pode ser escolhida por personagem do sexo feminino.
           </p>
         </div>
       )}

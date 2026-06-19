@@ -158,7 +158,7 @@ describe.skipIf(!hasSupabaseEnv)('Personagens (regras + permissões)', () => {
     ).rejects.toThrow();
   });
 
-  it('restrição Bruxa: bloqueia personagem masculino', async () => {
+  it('restrição Bruxa: bloqueia personagem masculino (independe da raça)', async () => {
     const p = await createTestUser('JogadorBruxaM');
     userIds.push(p.id);
     await joinAsPlayer(p, campaignId);
@@ -167,30 +167,14 @@ describe.skipIf(!hasSupabaseEnv)('Personagens (regras + permissões)', () => {
       characterService.createCharacter(p.client, p.id, baseInput({
         name: 'BruxoProibido',
         sex: 'male',
-        raceId: ruleset.raceId('Bruxa'),
+        raceId: ruleset.raceId('Humano'),
         slot1: ruleset.slotFor('Bruxa'),
         slot2: ruleset.slotFor('Mago'),
       })),
     ).rejects.toThrow(/feminino/i);
   });
 
-  it('restrição Bruxa: bloqueia raça não-Bruxa', async () => {
-    const p = await createTestUser('JogadorBruxaR');
-    userIds.push(p.id);
-    await joinAsPlayer(p, campaignId);
-
-    await expect(
-      characterService.createCharacter(p.client, p.id, baseInput({
-        name: 'QuaseBruxa',
-        sex: 'female',
-        raceId: ruleset.raceId('Humano'),
-        slot1: ruleset.slotFor('Bruxa'),
-        slot2: ruleset.slotFor('Mago'),
-      })),
-    ).rejects.toThrow(/raça Bruxa/i);
-  });
-
-  it('restrição Bruxa: permite mulher da raça Bruxa', async () => {
+  it('restrição Bruxa: permite mulher de qualquer raça (sem depender da raça)', async () => {
     const p = await createTestUser('BruxaValida');
     userIds.push(p.id);
     await joinAsPlayer(p, campaignId);
@@ -198,9 +182,9 @@ describe.skipIf(!hasSupabaseEnv)('Personagens (regras + permissões)', () => {
     const character = await characterService.createCharacter(p.client, p.id, baseInput({
       name: 'Morgana',
       sex: 'female',
-      raceId: ruleset.raceId('Bruxa'),
+      raceId: ruleset.raceId('Humano'),
       slot1: ruleset.slotFor('Bruxa'),
-      slot2: ruleset.slotFor('Mago'),
+      slot2: undefined,
     }));
     expect(character.id).toBeTruthy();
   });
