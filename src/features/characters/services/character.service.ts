@@ -53,7 +53,7 @@ export async function createCharacter(
   const existing = await repo.getCharacterByOwnerAndCampaign(supabase, userId, input.campaignId);
   if (existing) throw new ConflictError('Você já possui um personagem nesta campanha');
 
-  const classIds = [input.slot1.classId, input.slot2.classId];
+  const classIds = [input.slot1.classId, ...(input.slot2 ? [input.slot2.classId] : [])];
   await validateBruxaRestriction(supabase, input.raceId, input.sex, classIds);
 
   const character = await repo.createCharacter(supabase, {
@@ -68,10 +68,13 @@ export async function createCharacter(
     background: input.background ?? null,
   });
 
-  await repo.upsertCharacterClasses(supabase, [
+  const classRows: Array<{ characterId: string; slot: '1' | '2'; classId: string; specializationId: string }> = [
     { characterId: character.id, slot: '1', classId: input.slot1.classId, specializationId: input.slot1.specializationId },
-    { characterId: character.id, slot: '2', classId: input.slot2.classId, specializationId: input.slot2.specializationId },
-  ]);
+  ];
+  if (input.slot2) {
+    classRows.push({ characterId: character.id, slot: '2', classId: input.slot2.classId, specializationId: input.slot2.specializationId });
+  }
+  await repo.upsertCharacterClasses(supabase, classRows);
 
   // Atributos finais (distribuído + bônus racial) calculados na criação.
   // A vida atual inicia na máxima (vida_máxima = 100 + Constituição × 10).

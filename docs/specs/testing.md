@@ -31,7 +31,8 @@ tests/
     ├── campaigns.test.ts
     ├── invitations.test.ts
     ├── characters.test.ts
-    └── members-visibility.test.ts
+    ├── members-visibility.test.ts
+    └── ruleset.test.ts
 ```
 
 `vitest.config.ts`: `testTimeout/hookTimeout = 30000` (chamadas de rede) e
@@ -67,10 +68,16 @@ aplicada.
 |---|---|
 | `campaigns` | criação (regressão RLS 0012), listagem por participante, RLS de estranho, arquivar/reabrir sem perda, permissão de mestre |
 | `invitations` | aceitar (regressão RLS 0013), recusar + histórico (0014), cancelar, duplicidade pendente, não-reutilização, aceite por terceiro |
-| `characters` | multiclasse (2 slots), 1 personagem/campanha, especialização ∈ classe, Bruxa (masculino/raça/válido), bloqueio de ficha |
+| `characters` | multiclasse (uma ou duas combinações; slot 2 opcional), Fase 4 (região/atributos/perícias/vida), 1 personagem/campanha, especialização ∈ classe, Bruxa (masculino/raça/válido), bloqueio de ficha |
 | `members-visibility` | atributos privados (dono/mestre veem, outro jogador não), dados públicos, remoção → personagem morto + acesso revogado, mestre não se remove |
+| `ruleset` | catálogo de referência (raças/classes/especializações) |
 
-Total: 24 testes.
+Total: 30 testes.
+
+> ⚠️ A descrição da Bruxa acima ("masculino/raça/válido") ainda reflete a regra
+> antiga (classe Bruxa exige raça Bruxa). O ajuste para "só sexo feminino, sem
+> dependência de raça" (`CLAUDE.md` §5.5.2) é uma tarefa pendente, separada da
+> multiclasse — ver `_bmad-output/project-audit/`.
 
 ## Convenções
 

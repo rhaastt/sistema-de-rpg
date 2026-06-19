@@ -23,6 +23,16 @@ function parseJson<T>(raw: FormDataEntryValue | null): T | undefined {
   }
 }
 
+/** Monta o slot 2 (multiclasse opcional) só quando classe e especialização vierem preenchidas. */
+function optionalSlot(
+  classId: FormDataEntryValue | null,
+  specializationId: FormDataEntryValue | null,
+): { classId: string; specializationId: string } | undefined {
+  if (typeof classId !== 'string' || classId === '') return undefined;
+  if (typeof specializationId !== 'string' || specializationId === '') return undefined;
+  return { classId, specializationId };
+}
+
 export async function createCharacterAction(formData: FormData): Promise<ActionResult<Character>> {
   try {
     const user = await requireAuthUser();
@@ -41,10 +51,8 @@ export async function createCharacterAction(formData: FormData): Promise<ActionR
         classId: formData.get('slot1ClassId'),
         specializationId: formData.get('slot1SpecializationId'),
       },
-      slot2: {
-        classId: formData.get('slot2ClassId'),
-        specializationId: formData.get('slot2SpecializationId'),
-      },
+      // Slot 2 é opcional: só monta o objeto quando o jogador escolheu uma segunda classe.
+      slot2: optionalSlot(formData.get('slot2ClassId'), formData.get('slot2SpecializationId')),
       attributes: parseJson(formData.get('attributes')),
       skillIds: parseJson(formData.get('skillIds')),
     });
@@ -189,10 +197,7 @@ export async function createCharacterAndRedirect(formData: FormData): Promise<vo
       classId: formData.get('slot1ClassId'),
       specializationId: formData.get('slot1SpecializationId'),
     },
-    slot2: {
-      classId: formData.get('slot2ClassId'),
-      specializationId: formData.get('slot2SpecializationId'),
-    },
+    slot2: optionalSlot(formData.get('slot2ClassId'), formData.get('slot2SpecializationId')),
   });
 
   if (!parsed.success) return;

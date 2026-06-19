@@ -44,7 +44,7 @@ describe.skipIf(!hasSupabaseEnv)('Personagens (regras + permissões)', () => {
     await cleanupUsers(userIds);
   });
 
-  it('cria personagem com duas combinações classe+especialização', async () => {
+  it('cria personagem com duas combinações classe+especialização (multiclasse)', async () => {
     const character = await characterService.createCharacter(player.client, player.id, baseInput());
     expect(character.id).toBeTruthy();
 
@@ -55,6 +55,23 @@ describe.skipIf(!hasSupabaseEnv)('Personagens (regras + permissões)', () => {
     expect(sheet.attributes).toMatchObject({
       strength: 0, dexterity: 0, constitution: 0, intelligence: 0, mind: 0, charisma: 0,
     });
+  });
+
+  it('cria personagem com apenas uma classe (slot 2 opcional)', async () => {
+    const p = await createTestUser('JogadorClasseUnica');
+    userIds.push(p.id);
+    await joinAsPlayer(p, campaignId);
+
+    const character = await characterService.createCharacter(
+      p.client,
+      p.id,
+      baseInput({ name: 'Solo', slot2: undefined }),
+    );
+    expect(character.id).toBeTruthy();
+
+    const sheet = await characterService.getCharacterSheet(p.client, p.id, character.id);
+    expect(sheet.classes).toHaveLength(1);
+    expect(sheet.classes.map((c) => c.slot)).toEqual(['1']);
   });
 
   it('persiste região, atributos finais e perícias na criação (Fase 4)', async () => {
