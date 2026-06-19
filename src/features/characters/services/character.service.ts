@@ -4,7 +4,7 @@ import type { Character, CharacterFullView } from '@/domain/character/types';
 import { UnauthorizedError, NotFoundError, ValidationError, ConflictError } from '@/shared/errors';
 import * as repo from '@/features/characters/repositories/character.repository';
 import * as memberRepo from '@/features/members/repositories/member.repository';
-import { getRaceByName, getClassById } from '@/infrastructure/repositories/ruleset.repository';
+import { getClassById } from '@/infrastructure/repositories/ruleset.repository';
 import { insertHistoryEvent } from '@/infrastructure/repositories/history-log.repository';
 import { maxHp, clampHp } from '@/domain/character/vitals';
 import type { CreateCharacterInput, UpdateCharacterAttributesInput, UpdateCharacterNarrativeInput } from '@/features/characters/schemas';
@@ -19,24 +19,19 @@ async function log(supabase: Client, entry: Database['public']['Tables']['histor
   }
 }
 
-// Restrição: classe Bruxa só para personagens do sexo feminino E raça Bruxa
+// Restrição: a classe Bruxa só pode ser escolhida por personagens do sexo
+// feminino (CLAUDE.md §5.5.2). Não depende de raça.
 async function validateBruxaRestriction(
   supabase: Client,
-  raceId: string,
   sex: string,
   classIds: string[],
 ): Promise<void> {
-  const bruxaRace = await getRaceByName(supabase, 'Bruxa');
-  if (!bruxaRace) return;
+  if (sex === 'female') return; // mulheres podem escolher qualquer classe
 
   for (const classId of classIds) {
     const cls = await getClassById(supabase, classId);
-    if (cls?.name !== 'Bruxa') continue;
-    if (sex !== 'female') {
+    if (cls?.name === 'Bruxa') {
       throw new ValidationError('A classe Bruxa só pode ser escolhida por personagens do sexo feminino');
-    }
-    if (raceId !== bruxaRace.id) {
-      throw new ValidationError('A classe Bruxa só pode ser escolhida por personagens da raça Bruxa');
     }
   }
 }
@@ -53,8 +48,8 @@ export async function createCharacter(
   const existing = await repo.getCharacterByOwnerAndCampaign(supabase, userId, input.campaignId);
   if (existing) throw new ConflictError('Você já possui um personagem nesta campanha');
 
-  const classIds = [input.slot1.classId, input.slot2.classId];
-  await validateBruxaRestriction(supabase, input.raceId, input.sex, classIds);
+  const classIds = [input.slot1.classId, ...(input.slot2 ? [input.slot2.classId] : [])];
+  await validateBruxaRestriction(supabase, input.sex, classIds);
 
   const character = await repo.createCharacter(supabase, {
     campaign_id: input.campaignId,
@@ -68,10 +63,13 @@ export async function createCharacter(
     background: input.background ?? null,
   });
 
-  await repo.upsertCharacterClasses(supabase, [
+  const classRows: Array<{ characterId: string; slot: '1' | '2'; classId: string; specializationId: string }> = [
     { characterId: character.id, slot: '1', classId: input.slot1.classId, specializationId: input.slot1.specializationId },
-    { characterId: character.id, slot: '2', classId: input.slot2.classId, specializationId: input.slot2.specializationId },
-  ]);
+  ];
+  if (input.slot2) {
+    classRows.push({ characterId: character.id, slot: '2', classId: input.slot2.classId, specializationId: input.slot2.specializationId });
+  }
+  await repo.upsertCharacterClasses(supabase, classRows);
 
   // Atributos finais (distribuído + bônus racial) calculados na criação.
   // A vida atual inicia na máxima (vida_máxima = 100 + Constituição × 10).

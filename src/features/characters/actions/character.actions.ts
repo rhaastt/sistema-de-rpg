@@ -1,7 +1,6 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
 import { createClient } from '@/infrastructure/supabase/server';
 import { requireAuthUser } from '@/shared/auth/session';
 import { domainErrorMessage } from '@/shared/errors';
@@ -23,6 +22,16 @@ function parseJson<T>(raw: FormDataEntryValue | null): T | undefined {
   }
 }
 
+/** Monta o slot 2 (multiclasse opcional) só quando classe e especialização vierem preenchidas. */
+function optionalSlot(
+  classId: FormDataEntryValue | null,
+  specializationId: FormDataEntryValue | null,
+): { classId: string; specializationId: string } | undefined {
+  if (typeof classId !== 'string' || classId === '') return undefined;
+  if (typeof specializationId !== 'string' || specializationId === '') return undefined;
+  return { classId, specializationId };
+}
+
 export async function createCharacterAction(formData: FormData): Promise<ActionResult<Character>> {
   try {
     const user = await requireAuthUser();
@@ -41,10 +50,8 @@ export async function createCharacterAction(formData: FormData): Promise<ActionR
         classId: formData.get('slot1ClassId'),
         specializationId: formData.get('slot1SpecializationId'),
       },
-      slot2: {
-        classId: formData.get('slot2ClassId'),
-        specializationId: formData.get('slot2SpecializationId'),
-      },
+      // Slot 2 é opcional: só monta o objeto quando o jogador escolheu uma segunda classe.
+      slot2: optionalSlot(formData.get('slot2ClassId'), formData.get('slot2SpecializationId')),
       attributes: parseJson(formData.get('attributes')),
       skillIds: parseJson(formData.get('skillIds')),
     });
@@ -171,32 +178,4 @@ export async function changeCharacterStatusAction(
   } catch (e) {
     return { success: false, error: domainErrorMessage(e) };
   }
-}
-
-export async function createCharacterAndRedirect(formData: FormData): Promise<void> {
-  const user = await requireAuthUser();
-  const supabase = await createClient();
-
-  const parsed = CreateCharacterSchema.safeParse({
-    campaignId: formData.get('campaignId'),
-    name: formData.get('name'),
-    sex: formData.get('sex'),
-    age: formData.get('age') || undefined,
-    raceId: formData.get('raceId'),
-    visualDescription: formData.get('visualDescription') || undefined,
-    background: formData.get('background') || undefined,
-    slot1: {
-      classId: formData.get('slot1ClassId'),
-      specializationId: formData.get('slot1SpecializationId'),
-    },
-    slot2: {
-      classId: formData.get('slot2ClassId'),
-      specializationId: formData.get('slot2SpecializationId'),
-    },
-  });
-
-  if (!parsed.success) return;
-
-  const character = await service.createCharacter(supabase, user.id, parsed.data);
-  redirect(`/campaigns/${parsed.data.campaignId}/characters/${character.id}`);
 }

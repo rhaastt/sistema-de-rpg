@@ -44,7 +44,7 @@ describe.skipIf(!hasSupabaseEnv)('Personagens (regras + permissões)', () => {
     await cleanupUsers(userIds);
   });
 
-  it('cria personagem com duas combinações classe+especialização', async () => {
+  it('cria personagem com duas combinações classe+especialização (multiclasse)', async () => {
     const character = await characterService.createCharacter(player.client, player.id, baseInput());
     expect(character.id).toBeTruthy();
 
@@ -55,6 +55,23 @@ describe.skipIf(!hasSupabaseEnv)('Personagens (regras + permissões)', () => {
     expect(sheet.attributes).toMatchObject({
       strength: 0, dexterity: 0, constitution: 0, intelligence: 0, mind: 0, charisma: 0,
     });
+  });
+
+  it('cria personagem com apenas uma classe (slot 2 opcional)', async () => {
+    const p = await createTestUser('JogadorClasseUnica');
+    userIds.push(p.id);
+    await joinAsPlayer(p, campaignId);
+
+    const character = await characterService.createCharacter(
+      p.client,
+      p.id,
+      baseInput({ name: 'Solo', slot2: undefined }),
+    );
+    expect(character.id).toBeTruthy();
+
+    const sheet = await characterService.getCharacterSheet(p.client, p.id, character.id);
+    expect(sheet.classes).toHaveLength(1);
+    expect(sheet.classes.map((c) => c.slot)).toEqual(['1']);
   });
 
   it('persiste região, atributos finais e perícias na criação (Fase 4)', async () => {
@@ -141,7 +158,7 @@ describe.skipIf(!hasSupabaseEnv)('Personagens (regras + permissões)', () => {
     ).rejects.toThrow();
   });
 
-  it('restrição Bruxa: bloqueia personagem masculino', async () => {
+  it('restrição Bruxa: bloqueia personagem masculino (independe da raça)', async () => {
     const p = await createTestUser('JogadorBruxaM');
     userIds.push(p.id);
     await joinAsPlayer(p, campaignId);
@@ -150,30 +167,14 @@ describe.skipIf(!hasSupabaseEnv)('Personagens (regras + permissões)', () => {
       characterService.createCharacter(p.client, p.id, baseInput({
         name: 'BruxoProibido',
         sex: 'male',
-        raceId: ruleset.raceId('Bruxa'),
+        raceId: ruleset.raceId('Humano'),
         slot1: ruleset.slotFor('Bruxa'),
         slot2: ruleset.slotFor('Mago'),
       })),
     ).rejects.toThrow(/feminino/i);
   });
 
-  it('restrição Bruxa: bloqueia raça não-Bruxa', async () => {
-    const p = await createTestUser('JogadorBruxaR');
-    userIds.push(p.id);
-    await joinAsPlayer(p, campaignId);
-
-    await expect(
-      characterService.createCharacter(p.client, p.id, baseInput({
-        name: 'QuaseBruxa',
-        sex: 'female',
-        raceId: ruleset.raceId('Humano'),
-        slot1: ruleset.slotFor('Bruxa'),
-        slot2: ruleset.slotFor('Mago'),
-      })),
-    ).rejects.toThrow(/raça Bruxa/i);
-  });
-
-  it('restrição Bruxa: permite mulher da raça Bruxa', async () => {
+  it('restrição Bruxa: permite mulher de qualquer raça (sem depender da raça)', async () => {
     const p = await createTestUser('BruxaValida');
     userIds.push(p.id);
     await joinAsPlayer(p, campaignId);
@@ -181,9 +182,9 @@ describe.skipIf(!hasSupabaseEnv)('Personagens (regras + permissões)', () => {
     const character = await characterService.createCharacter(p.client, p.id, baseInput({
       name: 'Morgana',
       sex: 'female',
-      raceId: ruleset.raceId('Bruxa'),
+      raceId: ruleset.raceId('Humano'),
       slot1: ruleset.slotFor('Bruxa'),
-      slot2: ruleset.slotFor('Mago'),
+      slot2: undefined,
     }));
     expect(character.id).toBeTruthy();
   });

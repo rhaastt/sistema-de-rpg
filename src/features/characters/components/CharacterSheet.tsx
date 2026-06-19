@@ -8,7 +8,7 @@ import {
   changeCharacterStatusAction,
   setCharacterHpAction,
 } from '@/features/characters/actions/character.actions';
-import { ResourceBar } from '@/shared/ui';
+import { Avatar, Badge, Button, ResourceBar } from '@/shared/ui';
 import { maxHp, carryCapacity } from '@/domain/character/vitals';
 import { AttributesForm } from './AttributesForm';
 import type { CharacterFullView } from '@/domain/character/types';

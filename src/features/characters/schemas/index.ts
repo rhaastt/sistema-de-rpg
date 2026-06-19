@@ -24,7 +24,8 @@ export const CreateCharacterSchema = z.object({
   visualDescription: z.string().max(1000).optional(),
   background: z.string().max(3000).optional(),
   slot1: ClassSlotSchema,
-  slot2: ClassSlotSchema,
+  // Multiclasse opcional (nível 1): slot 1 obrigatório, slot 2 à escolha do jogador.
+  slot2: ClassSlotSchema.optional(),
   attributes: AttributesSchema.optional(),
   skillIds: z.array(z.string().uuid()).max(10).optional(),
 });
